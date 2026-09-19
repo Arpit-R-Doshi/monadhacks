@@ -131,6 +131,19 @@ app.get('/api/seed', async (req, res) => {
       rateLimit: 30,
       encryptionKey: generateKey(),
     },
+    {
+      id: 'phi3-mini-local',
+      name: 'Phi-3 Mini (Local)',
+      description: 'Microsoft\'s highly capable 3.8B parameter model optimized for lightweight local inference on CPUs/GPUs. Great for testing your local Ollama connection.',
+      category: 'general-intelligence',
+      ipfsCid: 'QmEclipse_Phi3_Mini_Encrypted_CID',
+      ownerAddress: '0x75199c1aa8F21Eb583027BbB6763B7c79CC180D6',
+      ollamaModel: 'phi3:mini',
+      pricePerUse: 0.1,
+      subscriptionPrice: 1,
+      rateLimit: 60,
+      encryptionKey: generateKey(),
+    },
   ];
 
   for (const model of demoModels) {

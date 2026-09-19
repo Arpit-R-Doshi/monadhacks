@@ -2,8 +2,8 @@ import { Router } from 'express';
 import { v4 as uuidv4 } from 'uuid';
 import { encrypt, decrypt } from '../services/encryption.js';
 import { uploadToIPFS } from '../services/ipfs.js';
-import { runInference, healthCheck, COMPUTE_NODES, getNodeById, allNodesHealth } from '../services/compute.js';
-import { getModelById, savePrompt, updatePromptResponse, getPromptsByUser, checkRateLimit, incrementModelUses, getOrCreateUser, updateUserBalance, getSubscription, updateSubscriptionTokens } from '../db/sqlite.js';
+import { runInference, healthCheck, COMPUTE_NODES, getNodeById, allNodesHealth, MODEL_COMPENSATION_RATES } from '../services/compute.js';
+import { getModelById, savePrompt, updatePromptResponse, getPromptsByUser, checkRateLimit, incrementModelUses, getOrCreateUser, updateUserBalance, getSubscription, updateSubscriptionTokens, addWorkerEarnings } from '../db/sqlite.js';
 import { createPromptOnChain, submitResponseOnChain, deductFromSubscriptionOnChain, hasActiveSubscription as hasActiveSubOnChain } from '../services/blockchain.js';
 
 const router = Router();
@@ -83,6 +83,15 @@ router.post('/', async (req, res) => {
     // 8. Run inference via compute node (Ollama or Remote Peer or Groq)
     const inferenceResult = await runInference(model, finalPrompt, null, selectedNode.url);
     console.log(`[Execution] Inference completed on ${selectedNode.name} (${selectedNode.id})`);
+
+    // 8.5 Compensate Worker if run on Ollama
+    if (selectedNode.id === 'ollama-local') {
+      const ollamaModelName = inferenceResult.model || model.ollama_model;
+      const compensation = MODEL_COMPENSATION_RATES[ollamaModelName] || 0.05; // default to 0.05 MON
+      const workerWallet = '0x0D53ae112F699a30Af6daC175E353172B7Db7cB9'; // Default hardcoded worker
+      addWorkerEarnings(workerWallet, compensation);
+      console.log(`[Execution] Worker ${workerWallet} compensated ${compensation} MON for running ${ollamaModelName}`);
+    }
 
     // 9. Encrypt response
     const encryptedResponse = encrypt(inferenceResult.response, model.encryption_key);

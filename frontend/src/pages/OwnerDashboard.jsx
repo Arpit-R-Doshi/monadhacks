@@ -91,10 +91,9 @@ export default function OwnerDashboard() {
     }
   };
 
-  const getModelIcon = (name) => {
-    if (name?.toLowerCase().includes('gemma')) return '💎';
-    if (name?.toLowerCase().includes('llama')) return '🦙';
-    return '🤖';
+  const getModelInitials = (name) => {
+    if (!name) return 'AI';
+    return name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
   };
 
   const totalEarnings = models.reduce((sum, m) => sum + (m.total_uses * m.price_per_use), 0);
@@ -105,7 +104,7 @@ export default function OwnerDashboard() {
     return (
       <div className="owner-dashboard">
         <div className="empty-state" style={{ paddingTop: '6rem' }}>
-          <div className="icon">🔒</div>
+          <div className="icon" style={{ background: 'var(--accent-primary)', color: 'white', borderRadius: '12px', width: 48, height: 48, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1rem', fontSize: '0.875rem', fontWeight: 700 }}>!</div>
           <h3>Connect your wallet</h3>
           <p>Connect your wallet to manage your AI models</p>
         </div>
@@ -125,30 +124,7 @@ export default function OwnerDashboard() {
         <Link to="/owner/upload" className="btn btn-primary" style={{ fontSize: '1.25rem', padding: '0.6rem 1.6rem' }}>Upload New Model</Link>
       </div>
 
-      {/* Platform Status */}
-      {health && (
-        <motion.div className="card" style={{ marginBottom: '2rem', padding: '1.5rem', width: 'max-content' }} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.1 }}>
-          <h3 style={{ marginBottom: '1rem', fontSize: '1.2rem' }}>Platform Status</h3>
-          <div style={{ display: 'flex', gap: '2rem', flexWrap: 'wrap' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <span className={`status-badge ${health.services?.database?.connected ? 'completed' : 'failed'}`}>●</span>
-              Database
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <span className={`status-badge ${health.services?.blockchain?.connected ? 'completed' : 'pending'}`}>●</span>
-              Blockchain
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <span className={`status-badge ${health.services?.ipfs?.connected ? 'completed' : 'pending'}`}>●</span>
-              IPFS
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <span className={`status-badge ${health.services?.compute?.healthy ? 'completed' : 'pending'}`}>●</span>
-              Compute
-            </div>
-          </div>
-        </motion.div>
-      )}
+
 
       {/* Stats Grid */}
       <div className="dashboard-grid">
@@ -173,7 +149,7 @@ export default function OwnerDashboard() {
             style={{ marginTop: '0.75rem', width: '100%', fontSize: '1.1rem' }}
             onClick={() => setShowCashout(true)}
           >
-            ⚡ Cashout MON
+            Cashout MON
           </button>
         </motion.div>
 
@@ -198,10 +174,10 @@ export default function OwnerDashboard() {
           </div>
         ) : models.length === 0 ? (
           <div className="card empty-state" style={{ padding: '3rem' }}>
-            <div className="icon">📦</div>
+            <div className="icon" style={{ background: 'var(--accent-primary)', color: 'white', borderRadius: '12px', width: 48, height: 48, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1rem', fontSize: '0.875rem', fontWeight: 700 }}>+</div>
             <h3>No models yet</h3>
             <p>Upload your first AI model to start earning MON tokens!</p>
-            <Link to="/owner/upload" className="btn btn-primary" style={{ marginTop: '1rem' }}>🚀 Upload Model</Link>
+            <Link to="/owner/upload" className="btn btn-primary" style={{ marginTop: '1rem' }}>Upload Model</Link>
           </div>
         ) : (
           <div className="models-grid">
@@ -214,7 +190,7 @@ export default function OwnerDashboard() {
               >
                 <div className="card model-card" style={{ cursor: 'default' }}>
                   <div className="model-header">
-                    <div className="model-avatar">{getModelIcon(model.name)}</div>
+                    <div className="model-avatar">{getModelInitials(model.name)}</div>
                     <div>
                       <div className="model-name">{model.name}</div>
                       <div className="model-category">{model.category}</div>
@@ -314,13 +290,13 @@ export default function OwnerDashboard() {
       {/* Shared With Me Section */}
       {sharedModels.length > 0 && (
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.6 }} style={{ marginTop: '2rem' }}>
-          <h3 style={{ marginBottom: '1rem', fontSize: '1.1rem', fontWeight: 700 }}>🤝 Shared With Me</h3>
+          <h3 style={{ marginBottom: '1rem', fontSize: '1.1rem', fontWeight: 700 }}>Shared With Me</h3>
           <div className="models-grid">
             {sharedModels.map((model, i) => (
               <motion.div key={model.id} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.1 }}>
                 <div className="card model-card" style={{ cursor: 'default', borderLeft: '3px solid #64b5f6' }}>
                   <div className="model-header">
-                    <div className="model-avatar">{getModelIcon(model.name)}</div>
+                    <div className="model-avatar">{getModelInitials(model.name)}</div>
                     <div>
                       <div className="model-name">{model.name}</div>
                       <div className="model-category">{model.category}</div>
@@ -342,11 +318,11 @@ export default function OwnerDashboard() {
         </motion.div>
       )}
 
-      {/* ─── SHARE MODAL ─── */}
+      {/* --- SHARE MODAL --- */}
       {shareModal && (
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
           <div className="card" style={{ width: '520px', maxHeight: '80vh', overflow: 'auto', padding: '2rem' }}>
-            <h3 style={{ marginBottom: '1rem' }}>👥 Share "{shareModal.name}"</h3>
+            <h3 style={{ marginBottom: '1rem' }}>Share "{shareModal.name}"</h3>
             <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '1rem' }}>Add wallet addresses and set their revenue share percentage.</p>
 
             {shareCoOwners.map((co, idx) => (
@@ -371,7 +347,7 @@ export default function OwnerDashboard() {
                 />
                 <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>%</span>
                 <button type="button" onClick={() => setShareCoOwners(prev => prev.filter((_, i) => i !== idx))}
-                  style={{ background: 'rgba(244,67,54,0.1)', color: '#ef5350', border: '1px solid rgba(244,67,54,0.3)', padding: '0.35rem 0.6rem', borderRadius: '6px', cursor: 'pointer' }}>✕</button>
+                  style={{ background: 'rgba(244,67,54,0.1)', color: '#ef5350', border: '1px solid rgba(244,67,54,0.3)', padding: '0.35rem 0.6rem', borderRadius: '6px', cursor: 'pointer' }}>x</button>
               </div>
             ))}
 
@@ -407,11 +383,11 @@ export default function OwnerDashboard() {
         </div>
       )}
 
-      {/* ─── TRANSFER MODAL ─── */}
+      {/* --- TRANSFER MODAL --- */}
       {transferModal && (
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
           <div className="card" style={{ width: '480px', padding: '2rem' }}>
-            <h3 style={{ marginBottom: '1rem' }}>🔄 Transfer "{transferModal.name}"</h3>
+            <h3 style={{ marginBottom: '1rem' }}>Transfer "{transferModal.name}"</h3>
             <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '1rem' }}>Transfer full primary ownership to another wallet. This action is irreversible.</p>
             <input
               className="form-input"

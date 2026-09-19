@@ -89,12 +89,12 @@ export default function FaucetModal({ isOpen, onClose }) {
             fontSize: '1.25rem', cursor: 'pointer',
           }}
         >
-          ✕
+          x
         </button>
 
         {/* Header */}
         <div style={{ textAlign: 'center', marginBottom: '1.5rem' }}>
-          <div style={{ fontSize: '2.5rem', marginBottom: '0.5rem' }}>⟠</div>
+          <div style={{ fontSize: '2.5rem', marginBottom: '0.5rem' }}></div>
           <h2 style={{ fontSize: '1.4rem', fontWeight: 700, margin: '0 0 0.25rem 0' }}>
             Get Monad Testnet Tokens
           </h2>
@@ -137,7 +137,7 @@ export default function FaucetModal({ isOpen, onClose }) {
             boxShadow: '0 4px 14px rgba(124, 58, 237, 0.4)',
           }}
         >
-          {claiming ? 'Claiming Monad Tokens...' : '⚡ Instant Claim Faucet (10 MON)'}
+          {claiming ? 'Claiming Monad Tokens...' : ' Instant Claim Faucet (10 MON)'}
         </button>
 
         {/* Action 2: Official Monad Faucet */}

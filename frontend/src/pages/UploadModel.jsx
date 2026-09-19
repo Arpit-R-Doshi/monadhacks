@@ -19,6 +19,8 @@ export default function UploadModel() {
     rateLimit: 10,
     computeNodeUrl: '',
     inputModality: 'text',
+    sourceUrl: '',
+    ownershipProof: false,
   });
 
   const [files, setFiles] = useState({
@@ -29,8 +31,8 @@ export default function UploadModel() {
   const [coOwners, setCoOwners] = useState([]);
 
   const handleChange = (e) => {
-    const { name, value } = e.target;
-    setForm(prev => ({ ...prev, [name]: value }));
+    const { name, value, type, checked } = e.target;
+    setForm(prev => ({ ...prev, [name]: type === 'checkbox' ? checked : value }));
   };
 
   const handleFileChange = (e) => {
@@ -50,6 +52,11 @@ export default function UploadModel() {
 
     if (!form.name) {
       toast.error('Model name is required');
+      return;
+    }
+
+    if (!form.ownershipProof) {
+      toast.error('You must declare ownership rights to register a model');
       return;
     }
 
@@ -89,6 +96,7 @@ export default function UploadModel() {
       formData.append('ownerAddress', wallet);
       formData.append('isRemote', isRemote.toString());
       formData.append('inputModality', form.inputModality);
+      formData.append('sourceUrl', form.sourceUrl);
 
       if (!isRemote) {
         formData.append('ollamaModel', form.ollamaModel);
@@ -237,7 +245,7 @@ export default function UploadModel() {
             <input className="form-input" type="number" name="rateLimit" value={form.rateLimit} onChange={handleChange} min="1" max="100" />
           </div>
 
-          {/* ─── CO-OWNERSHIP SECTION ─── */}
+          {/*  CO-OWNERSHIP SECTION  */}
           <div style={{ padding: '1rem', background: 'rgba(33,150,243,0.06)', borderRadius: '8px', border: '1px dashed rgba(33,150,243,0.3)', marginBottom: '1rem' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
               <h4 style={{ margin: 0, color: '#64b5f6', fontSize: '1.4rem' }}>Co-Ownership & Revenue Sharing</h4>
@@ -286,16 +294,49 @@ export default function UploadModel() {
                   onClick={() => setCoOwners(prev => prev.filter((_, i) => i !== idx))}
                   style={{ background: 'rgba(244,67,54,0.1)', color: '#ef5350', border: '1px solid rgba(244,67,54,0.3)', padding: '0.35rem 0.6rem', borderRadius: '6px', cursor: 'pointer', fontSize: '0.8rem' }}
                 >
-                  ✕
+                  
                 </button>
               </div>
             ))}
 
             {coOwners.length > 0 && (
               <div style={{ fontSize: '1.1rem', color: coOwners.reduce((s, c) => s + c.sharePercent, 0) > 100 ? '#ef5350' : '#059669', marginTop: '0.25rem' }}>
-                Co-owner total: {coOwners.reduce((s, c) => s + c.sharePercent, 0)}% — Your share: {100 - coOwners.reduce((s, c) => s + c.sharePercent, 0)}%
+                Co-owner total: {coOwners.reduce((s, c) => s + c.sharePercent, 0)}% - Your share: {100 - coOwners.reduce((s, c) => s + c.sharePercent, 0)}%
               </div>
             )}
+          </div>
+
+          {/* PROOF OF OWNERSHIP SECTION */}
+          <div style={{ padding: '1rem', background: 'rgba(234,179,8,0.06)', borderRadius: '8px', border: '1px dashed rgba(234,179,8,0.3)', marginBottom: '1.5rem' }}>
+            <h4 style={{ margin: '0 0 1rem 0', color: '#facc15', fontSize: '1.4rem' }}>Proof of Ownership</h4>
+            
+            <div className="form-group">
+              <label className="form-label">Model Source / Repository URL (Optional)</label>
+              <input 
+                className="form-input" 
+                name="sourceUrl" 
+                value={form.sourceUrl} 
+                onChange={handleChange} 
+                placeholder="e.g., https://huggingface.co/my-org/my-model" 
+              />
+              <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.25rem' }}>
+                Providing a source link helps verify your claim and builds trust in the marketplace.
+              </p>
+            </div>
+
+            <label style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem', cursor: 'pointer', marginTop: '1rem' }}>
+              <input 
+                type="checkbox" 
+                name="ownershipProof"
+                checked={form.ownershipProof}
+                onChange={handleChange}
+                style={{ width: '18px', height: '18px', accentColor: '#facc15', marginTop: '0.2rem' }}
+                required
+              />
+              <span style={{ fontSize: '1.1rem', color: 'var(--text-primary)' }}>
+                I declare that I am the original creator of this model, or I possess the necessary commercial rights and licenses to deploy and monetize it on the ECLIPSE network.
+              </span>
+            </label>
           </div>
 
           <div style={{ marginTop: '0.5rem', padding: '1rem', background: 'rgba(16,185,129,0.08)', borderRadius: 'var(--radius-sm)', fontSize: '1.2rem', color: 'var(--text-secondary)' }}>

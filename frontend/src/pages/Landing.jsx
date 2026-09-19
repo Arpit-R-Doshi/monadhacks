@@ -8,12 +8,12 @@ export default function Landing() {
   const { wallet } = useContext(AppContext);
 
   const features = [
-    { icon: '🔐', title: 'E2E Encryption', desc: 'AES-256 encrypted models on IPFS. Only authorized compute nodes decrypt for inference.' },
-    { icon: '⛓️', title: 'On-Chain Ownership', desc: 'Immutable ownership on Monad. Your wallet = your proof of authorship.' },
-    { icon: '💰', title: 'Instant Revenue', desc: 'Smart contracts auto-split revenue. No middlemen, no delays.' },
-    { icon: '🌐', title: 'IPFS Storage', desc: 'Censorship-resistant, decentralized model storage with zero single-point failure.' },
-    { icon: '⚡', title: 'Edge Compute', desc: 'Groq Cloud LPU acceleration. Sub-second latency at 500+ T/s.' },
-    { icon: '🔍', title: 'Full Auditability', desc: 'Every prompt, response, and payment immutably recorded on Monad.' },
+    { icon: '', title: 'E2E Encryption', desc: 'AES-256 encrypted models on IPFS. Only authorized compute nodes decrypt for inference.' },
+    { icon: '', title: 'On-Chain Ownership', desc: 'Immutable ownership on Monad. Your wallet = your proof of authorship.' },
+    { icon: '', title: 'Instant Revenue', desc: 'Smart contracts auto-split revenue. No middlemen, no delays.' },
+    { icon: '', title: 'IPFS Storage', desc: 'Censorship-resistant, decentralized model storage with zero single-point failure.' },
+    { icon: '', title: 'Edge Compute', desc: 'Groq Cloud LPU acceleration. Sub-second latency at 500+ T/s.' },
+    { icon: '', title: 'Full Auditability', desc: 'Every prompt, response, and payment immutably recorded on Monad.' },
   ];
 
   const steps = [
@@ -32,7 +32,7 @@ export default function Landing() {
 
   return (
     <div className="landing-page">
-      {/* ─── HERO WITH SHADER ─── */}
+      {/*  HERO WITH SHADER  */}
       <section className="shader-hero">
         <WebGLShader />
         <div className="shader-hero-overlay" />
@@ -65,7 +65,7 @@ export default function Landing() {
             transition={{ duration: 0.5, delay: 0.4 }}
           >
             <Link to="/login" className="cta-primary">
-              Get Started →
+              Get Started 
             </Link>
             <Link to="/marketplace" className="cta-secondary">
               Browse Models
@@ -87,9 +87,9 @@ export default function Landing() {
           </motion.div>
         </div>
       </section>
-      {/* ─── SECTIONS WITH SOLID BACKGROUND ─── */}
+      {/*  SECTIONS WITH SOLID BACKGROUND  */}
       <div className="landing-body">
-        {/* ─── FEATURES ─── */}
+        {/*  FEATURES  */}
         <section className="landing-features">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -98,7 +98,7 @@ export default function Landing() {
             className="landing-section-header"
           >
             <h2>Why ECLIPSE<span style={{ color: 'var(--accent-primary)' }}>.AI</span>?</h2>
-            <p>A fully decentralized pipeline — from model upload to inference execution</p>
+            <p>A fully decentralized pipeline - from model upload to inference execution</p>
           </motion.div>
 
           <div className="landing-features-grid">
@@ -119,7 +119,7 @@ export default function Landing() {
           </div>
         </section>
 
-        {/* ─── HOW IT WORKS ─── */}
+        {/*  HOW IT WORKS  */}
         <section className="landing-steps">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -151,7 +151,7 @@ export default function Landing() {
           </div>
         </section>
 
-        {/* ─── CTA BOTTOM ─── */}
+        {/*  CTA BOTTOM  */}
         <section className="landing-bottom-cta">
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
@@ -162,7 +162,7 @@ export default function Landing() {
             <p>Join the decentralized AI revolution. Publish your first model in minutes.</p>
             <div className="shader-cta" style={{ justifyContent: 'center' }}>
               <Link to="/login" className="cta-primary">
-                Launch App →
+                Launch App 
               </Link>
             </div>
           </motion.div>

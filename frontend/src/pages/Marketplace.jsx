@@ -29,10 +29,9 @@ export default function Marketplace() {
     m.description?.toLowerCase().includes(search.toLowerCase())
   );
 
-  const getModelIcon = (name) => {
-    if (name?.toLowerCase().includes('gemma')) return '💎';
-    if (name?.toLowerCase().includes('llama')) return '🦙';
-    return '🤖';
+  const getModelInitials = (name) => {
+    if (!name) return 'AI';
+    return name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
   };
 
   return (
@@ -45,7 +44,9 @@ export default function Marketplace() {
           </p>
         </div>
         <div className="search-bar">
-          <span>🔍</span>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: 'var(--text-muted)', flexShrink: 0 }}>
+            <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+          </svg>
           <input
             type="text"
             placeholder="Search models..."
@@ -62,7 +63,7 @@ export default function Marketplace() {
         </div>
       ) : filtered.length === 0 ? (
         <div className="empty-state">
-          <div className="icon">🤖</div>
+          <div className="icon" style={{ background: 'var(--accent-primary)', color: 'white', borderRadius: '12px', width: 48, height: 48, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1rem', fontSize: '1.2rem', fontWeight: 700 }}>AI</div>
           <h3>No models found</h3>
           <p>Try seeding demo models by visiting the backend /api/seed endpoint</p>
         </div>
@@ -78,7 +79,7 @@ export default function Marketplace() {
               <Link to={`/model/${model.id}`}>
                 <div className="card model-card">
                   <div className="model-header">
-                    <div className="model-avatar">{getModelIcon(model.name)}</div>
+                    <div className="model-avatar">{getModelInitials(model.name)}</div>
                     <div>
                       <div className="model-name">{model.name}</div>
                       <div className="model-category">{model.category || 'text-generation'}</div>
@@ -104,7 +105,7 @@ export default function Marketplace() {
                       <span className="amount">{model.price_per_use || 1}</span>
                       <span className="unit">MON / use</span>
                     </div>
-                    <span className="btn btn-primary" style={{ padding: '0.55rem 1.1rem', fontSize: '1.1rem', letterSpacing: '0.06em' }}>Try Now →</span>
+                    <span className="btn btn-primary" style={{ padding: '0.55rem 1.1rem', fontSize: '0.875rem', letterSpacing: '0.06em' }}>Try Now</span>
                   </div>
                 </div>
               </Link>

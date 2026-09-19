@@ -38,6 +38,7 @@ export default function ModelDetail() {
     setMessages([]);  // clear on model switch
     setHistoryLoaded(false);
     setSessionId(crypto.randomUUID()); // new session for each model
+    setSelectedNode('groq-cloud'); // reset to default node
   }, [id]);
 
   // Load chat history and check subscription when wallet is connected
@@ -213,7 +214,7 @@ export default function ModelDetail() {
       const data = await syncRes.json();
       
       if (data.success) {
-        toast.success('🎉 Subscribed on Monad testnet successfully!', { id: 'sub-tx' });
+        toast.success(' Subscribed on Monad testnet successfully!', { id: 'sub-tx' });
         setSubscribed(true);
         refreshBalance();
         checkSubscription();
@@ -322,10 +323,9 @@ export default function ModelDetail() {
     );
   }
 
-  const getModelIcon = (name) => {
-    if (name?.toLowerCase().includes('gemma')) return '💎';
-    if (name?.toLowerCase().includes('llama')) return '🦙';
-    return '🤖';
+  const getModelInitials = (name) => {
+    if (!name) return 'AI';
+    return name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
   };
 
   return (
@@ -337,8 +337,8 @@ export default function ModelDetail() {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
       >
-        <div className="model-avatar" style={{ width: 64, height: 64, fontSize: '2rem' }}>
-          {getModelIcon(model.name)}
+        <div className="model-avatar" style={{ width: 64, height: 64, fontSize: '1.1rem' }}>
+          {getModelInitials(model.name)}
         </div>
         <div className="model-detail-info">
           <h1>{model.name}</h1>
@@ -381,7 +381,7 @@ export default function ModelDetail() {
       >
         <div className="prompt-header" style={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem' }}>
           <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
-            <h3>💬 Run Inference</h3>
+            <h3>Run Inference</h3>
             <span className="status-badge completed">● Live</span>
             {messages.length > 0 && (
               <button
@@ -402,7 +402,7 @@ export default function ModelDetail() {
                 onMouseOver={(e) => { e.currentTarget.style.background = 'rgba(167,139,250,0.25)'; }}
                 onMouseOut={(e) => { e.currentTarget.style.background = 'rgba(167,139,250,0.1)'; }}
               >
-                ✨ New Chat
+                New Chat
               </button>
             )}
           </div>
@@ -413,7 +413,7 @@ export default function ModelDetail() {
                  Tokens remaining: <span style={{ color: 'var(--text)', fontWeight: 'bold' }}>{subDetails.tokens_allocated - subDetails.tokens_used}</span> / {subDetails.tokens_allocated}
                </div>
             )}
-            {wallet && <span className="balance-badge">💎 {typeof balance === 'number' ? balance.toFixed(3) : balance} MON</span>}
+            {wallet && <span className="balance-badge">{typeof balance === 'number' ? balance.toFixed(3) : balance} MON</span>}
           </div>
         </div>
 
@@ -425,9 +425,11 @@ export default function ModelDetail() {
             marginBottom: '0.5rem',
           }}>
             <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 600 }}>
-              ⚙️ Compute Node:
+              Compute Node:
             </span>
-            {computeNodes.map(node => (
+            {computeNodes
+              .filter(node => model?.id === 'phi3-mini-local' || node.id !== 'ollama-local')
+              .map(node => (
               <button
                 key={node.id}
                 onClick={() => setSelectedNode(node.id)}
@@ -440,7 +442,6 @@ export default function ModelDetail() {
                   border: selectedNode === node.id ? '1px solid rgba(124,58,237,0.4)' : '1px solid rgba(255,255,255,0.06)',
                 }}
               >
-                <span>{node.icon}</span>
                 <span>{node.name}</span>
               </button>
             ))}
@@ -450,7 +451,11 @@ export default function ModelDetail() {
         <div className="prompt-messages">
           {messages.length === 0 && historyLoaded && (
             <div className="empty-state" style={{ padding: '2rem' }}>
-              <div className="icon">💬</div>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1rem', width: 56, height: 56, borderRadius: '16px', background: 'var(--accent-primary)' }}>
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+                </svg>
+              </div>
               <h3>Start a conversation</h3>
               <p>Enter a prompt below to run inference on {model.name}</p>
             </div>
@@ -466,7 +471,7 @@ export default function ModelDetail() {
           {messages.some(m => m.historical) && (
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', margin: '0.5rem 0' }}>
               <div style={{ flex: 1, height: '1px', background: 'var(--border)' }} />
-              <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>📜 Previous conversation</span>
+              <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>Previous conversation</span>
               <div style={{ flex: 1, height: '1px', background: 'var(--border)' }} />
             </div>
           )}
@@ -476,9 +481,9 @@ export default function ModelDetail() {
               {msg.content}
               {msg.meta && (
                 <div className="meta">
-                  {msg.meta.inputTokens > 0 && <span>📥 {msg.meta.inputTokens} in</span>}
-                  {msg.meta.outputTokens > 0 && <span>📤 {msg.meta.outputTokens} out</span>}
-                  {msg.meta.duration > 0 && <span>⏱️ {(msg.meta.duration / 1000).toFixed(1)}s</span>}
+                  {msg.meta.inputTokens > 0 && <span>{msg.meta.inputTokens} in</span>}
+                  {msg.meta.outputTokens > 0 && <span>{msg.meta.outputTokens} out</span>}
+                  {msg.meta.duration > 0 && <span>{(msg.meta.duration / 1000).toFixed(1)}s</span>}
                 </div>
               )}
             </div>
@@ -509,7 +514,7 @@ export default function ModelDetail() {
                 onClick={sendPrompt}
                 disabled={!wallet || !prompt.trim() || sending}
               >
-                {sending ? '⏳' : '↑'}
+                {sending ? '...' : '↑'}
               </button>
             </div>
           </div>

@@ -106,12 +106,12 @@ export default function ChatHistory() {
   };
 
   const getModelIcon = (name) => {
-    if (!name) return '🤖';
+    if (!name) return '';
     const n = name.toLowerCase();
-    if (n.includes('gemma')) return '💎';
-    if (n.includes('llama')) return '🦙';
-    if (n.includes('mixtral')) return '🌪️';
-    return '🤖';
+    if (n.includes('gemma')) return '';
+    if (n.includes('llama')) return '';
+    if (n.includes('mixtral')) return '';
+    return '';
   };
 
   // Filtered prompts
@@ -157,7 +157,7 @@ export default function ChatHistory() {
     return (
       <div className="history-page">
         <div className="empty-state" style={{ padding: '6rem 2rem' }}>
-          <div className="icon">🔒</div>
+          <div className="icon"></div>
           <h3>Connect your wallet</h3>
           <p>Your usage records, token consumption, and purchase history will appear here once you connect your wallet.</p>
         </div>
@@ -219,7 +219,7 @@ export default function ChatHistory() {
             {summary?.inferences || prompts.length}
           </div>
           <div style={{ fontSize: '0.72rem', color: '#34d399', marginTop: '0.25rem' }}>
-            ⚡ Avg Latency: {summary?.avgLatencyMs || 0} ms
+             Avg Latency: {summary?.avgLatencyMs || 0} ms
           </div>
         </div>
 
@@ -266,7 +266,7 @@ export default function ChatHistory() {
             display: 'flex', alignItems: 'center', gap: '0.5rem',
           }}
         >
-          <span>📊</span> Usage & Token History
+          <span></span> Usage & Token History
           <span style={{
             fontSize: '0.72rem', padding: '0.15rem 0.45rem', borderRadius: '10px',
             background: 'rgba(255,255,255,0.08)', color: '#c4b5fd',
@@ -286,7 +286,7 @@ export default function ChatHistory() {
             display: 'flex', alignItems: 'center', gap: '0.5rem',
           }}
         >
-          <span>💳</span> Purchase History
+          <span></span> Purchase History
           <span style={{
             fontSize: '0.72rem', padding: '0.15rem 0.45rem', borderRadius: '10px',
             background: 'rgba(255,255,255,0.08)', color: '#c4b5fd',
@@ -306,7 +306,7 @@ export default function ChatHistory() {
             display: 'flex', alignItems: 'center', gap: '0.5rem',
           }}
         >
-          <span>💬</span> Chat Sessions
+          <span></span> Chat Sessions
           <span style={{
             fontSize: '0.72rem', padding: '0.15rem 0.45rem', borderRadius: '10px',
             background: 'rgba(255,255,255,0.08)', color: '#c4b5fd',
@@ -360,7 +360,7 @@ export default function ChatHistory() {
 
               {filteredPrompts.length === 0 ? (
                 <div className="card empty-state" style={{ padding: '3rem' }}>
-                  <div className="icon">📝</div>
+                  <div className="icon"></div>
                   <h3>No inference history found</h3>
                   <p>You haven't run any prompts or API requests yet.</p>
                   <Link to="/marketplace" className="btn btn-primary" style={{ marginTop: '1rem' }}>
@@ -427,11 +427,11 @@ export default function ChatHistory() {
                               </span>
                             </td>
                             <td style={{ fontSize: '0.8rem', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>
-                              {p.duration_ms ? `${(p.duration_ms / 1000).toFixed(2)}s` : '—'}
+                              {p.duration_ms ? `${(p.duration_ms / 1000).toFixed(2)}s` : '-'}
                             </td>
                             <td>
                               <span className={`status-badge ${p.status}`} style={{ fontSize: '0.72rem' }}>
-                                {p.status === 'completed' ? '✓ Completed' : p.status}
+                                {p.status === 'completed' ? ' Completed' : p.status}
                               </span>
                             </td>
                             <td style={{ fontSize: '0.75rem', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>
@@ -449,7 +449,7 @@ export default function ChatHistory() {
                                       padding: '0.2rem 0.45rem', borderRadius: '4px', background: 'rgba(139,92,246,0.15)',
                                     }}
                                   >
-                                    Monad ↗
+                                    Monad 
                                   </a>
                                 ) : (
                                   <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>On-Chain</span>
@@ -465,7 +465,7 @@ export default function ChatHistory() {
                                     }}
                                     title="IPFS CID"
                                   >
-                                    IPFS ↗
+                                    IPFS 
                                   </a>
                                 )}
                               </div>
@@ -485,7 +485,7 @@ export default function ChatHistory() {
             <div>
               {filteredSubscriptions.length === 0 ? (
                 <div className="card empty-state" style={{ padding: '3.5rem' }}>
-                  <div className="icon">💳</div>
+                  <div className="icon"></div>
                   <h3>No purchase records found</h3>
                   <p>You haven't purchased any monthly model subscriptions yet.</p>
                   <Link to="/marketplace" className="btn btn-primary" style={{ marginTop: '1rem' }}>
@@ -579,7 +579,7 @@ export default function ChatHistory() {
                                   rel="noreferrer"
                                   style={{ color: '#a78bfa', textDecoration: 'none', fontWeight: 600 }}
                                 >
-                                  Monad Explorer ↗
+                                  Monad Explorer 
                                 </a>
                               ) : (
                                 <span style={{ color: 'var(--text-muted)' }}>Monad Testnet</span>
@@ -594,7 +594,7 @@ export default function ChatHistory() {
                           className="btn btn-primary"
                           style={{ width: '100%', textAlign: 'center', display: 'block', fontSize: '0.9rem', padding: '0.65rem' }}
                         >
-                          Launch Model & Run Inference →
+                          Launch Model & Run Inference 
                         </Link>
                       </div>
                     );
@@ -609,7 +609,7 @@ export default function ChatHistory() {
             <div>
               {filteredConvs.length === 0 ? (
                 <div className="empty-state" style={{ padding: '4rem' }}>
-                  <div className="icon">💬</div>
+                  <div className="icon"></div>
                   <h3>{search ? 'No results found' : 'No conversations yet'}</h3>
                   <p>{search ? 'Try a different search term.' : 'Start chatting with AI models in the marketplace!'}</p>
                   {!search && <Link to="/marketplace" className="btn btn-primary" style={{ marginTop: '1rem' }}>Browse Models</Link>}
@@ -663,7 +663,7 @@ export default function ChatHistory() {
                             to={`/model/${activeConvData.modelId}`}
                             className="btn btn-primary btn-sm"
                           >
-                            Continue Chat →
+                            Continue Chat 
                           </Link>
                         </div>
 
@@ -717,7 +717,7 @@ export default function ChatHistory() {
                       </>
                     ) : (
                       <div className="empty-state" style={{ height: '100%' }}>
-                        <div className="icon">💬</div>
+                        <div className="icon"></div>
                         <p>Select a conversation</p>
                       </div>
                     )}

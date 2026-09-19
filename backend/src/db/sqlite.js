@@ -297,6 +297,13 @@ export function updateUserBalance(address, amount) {
   db.prepare('UPDATE users SET balance = balance + ?, total_spent = total_spent + ? WHERE LOWER(address) = ?').run(amount, amount < 0 ? Math.abs(amount) : 0, addr);
 }
 
+export function addWorkerEarnings(address, amount) {
+  const addr = (address || '').toLowerCase();
+  // Ensure worker exists
+  getOrCreateUser(addr);
+  db.prepare('UPDATE users SET balance = balance + ? WHERE LOWER(address) = ?').run(amount, addr);
+}
+
 // Rate limiting
 export function checkRateLimit(userAddress, modelId, limit) {
   const addr = (userAddress || '').toLowerCase();

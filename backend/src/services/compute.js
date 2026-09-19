@@ -34,7 +34,7 @@ export const COMPUTE_NODES = [
     type: 'groq',
     location: 'Global LPU Cluster',
     specs: 'Ultra-fast LPU inference (500+ T/s)',
-    icon: '⚡',
+    icon: null,
   },
   {
     id: 'ollama-local',
@@ -43,7 +43,7 @@ export const COMPUTE_NODES = [
     url: getOllamaUrl(),
     location: 'Dedicated Compute Machine 1',
     specs: 'Local GPU/CPU Worker',
-    icon: '🦙',
+    icon: null,
   },
 ];
 
@@ -65,12 +65,26 @@ export const GROQ_MODEL_MAP = {
 
 // Model mapping for Ollama local
 export const OLLAMA_MODEL_MAP = {
-  'gemma:2b': 'gemma:2b',
-  'llama3:8b': 'llama3:8b',
-  'llama-3.1-8b': 'llama3:8b',
-  'llama-3.3-70b': 'llama3:8b',
-  'gemma-2b-demo': 'gemma:2b',
-  'llama3-8b-demo': 'llama3:8b',
+  // Lightweight (recommended for friend's PC)
+  'phi3:mini':       'phi3:mini',       // 2.2GB - best quality/size ratio
+  'gemma:2b':        'gemma:2b',        // 1.4GB
+  'tinyllama':       'tinyllama',       // 640MB - ultra light
+  'qwen2:0.5b':      'qwen2:0.5b',      // 400MB - smallest usable
+  // Standard
+  'llama3:8b':       'llama3:8b',
+  'llama-3.1-8b':    'llama3:8b',
+  'llama-3.3-70b':   'phi3:mini',       // fallback to phi3 for local node
+  'gemma-2b-demo':   'gemma:2b',
+  'llama3-8b-demo':  'phi3:mini',       // default local model
+};
+
+// Compensation for workers based on model compute requirements
+export const MODEL_COMPENSATION_RATES = {
+  'phi3:mini': 0.05,
+  'gemma:2b': 0.04,
+  'tinyllama': 0.01,
+  'qwen2:0.5b': 0.01,
+  'llama3:8b': 0.10,
 };
 
 /**

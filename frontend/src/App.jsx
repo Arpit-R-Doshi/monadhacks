@@ -10,6 +10,7 @@ import UploadModel from './pages/UploadModel.jsx';
 import ChatHistory from './pages/ChatHistory.jsx';
 import RoleSelect from './pages/RoleSelect.jsx';
 import OwnerDashboard from './pages/OwnerDashboard.jsx';
+import WorkerDashboard from './pages/WorkerDashboard.jsx';
 import { useAccount, useBalance } from 'wagmi';
 import { monadTestnet } from './main.jsx';
 
@@ -134,16 +135,20 @@ function App() {
     }
   }, [onChainBalData]);
 
-  // Listen for account changes via Wagmi hook
+  // Listen for account changes via Wagmi hook or role hardcode
   useEffect(() => {
-    if (isConnected && address) {
+    if (userRole === 'worker') {
+      const workerAddr = '0x0D53ae112F699a30Af6daC175E353172B7Db7cB9';
+      setWallet(workerAddr);
+      syncBackendWallet(workerAddr);
+    } else if (isConnected && address) {
       setWallet(address);
       syncBackendWallet(address);
     } else {
       setWallet(null);
       setBalance(0);
     }
-  }, [isConnected, address]);
+  }, [isConnected, address, userRole]);
 
   useEffect(() => {
     if (wallet) refreshBalance();
@@ -179,6 +184,8 @@ function App() {
           {/* Owner routes */}
           <Route path="/owner" element={<OwnerDashboard />} />
           <Route path="/owner/upload" element={<UploadModel />} />
+          {/* Worker route */}
+          <Route path="/worker" element={<WorkerDashboard />} />
         </Routes>
         <footer className="footer">
           <p>© 2026 ECLIPSE.AI — Decentralized AI Model Marketplace | Built on Monad Testnet</p>

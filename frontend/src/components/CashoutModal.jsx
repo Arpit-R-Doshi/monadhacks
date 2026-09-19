@@ -139,7 +139,7 @@ export default function CashoutModal({ isOpen, onClose, onSuccess }) {
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1.25rem' }}>
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
-              <span style={{ fontSize: '1.5rem' }}>💸</span>
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#a78bfa" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
               <h3 style={{ margin: 0, fontSize: '1.35rem', fontWeight: 800, letterSpacing: '-0.02em', color: '#fff' }}>
                 Cashout Model Earnings
               </h3>
@@ -158,7 +158,7 @@ export default function CashoutModal({ isOpen, onClose, onSuccess }) {
             onMouseEnter={(e) => e.target.style.color = '#fff'}
             onMouseLeave={(e) => e.target.style.color = 'var(--text-muted)'}
           >
-            ✕
+            x
           </button>
         </div>
 
@@ -229,7 +229,7 @@ export default function CashoutModal({ isOpen, onClose, onSuccess }) {
             animation: 'fadeIn 0.3s ease',
           }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#34d399', fontWeight: 700, fontSize: '0.88rem' }}>
-              <span>✅</span> On-Chain Transfer Confirmed!
+              On-Chain Transfer Confirmed!
             </div>
             <p style={{ margin: '0.35rem 0 0.6rem 0', fontSize: '0.78rem', color: '#d1fae5' }}>
               Sent <strong>{lastTx.amount} MON</strong> directly to <code>{formatShortAddress(lastTx.recipient)}</code>
@@ -331,8 +331,8 @@ export default function CashoutModal({ isOpen, onClose, onSuccess }) {
               onChange={(e) => setRecipientAddress(e.target.value)}
               style={{ width: '100%', fontSize: '0.88rem', fontFamily: 'monospace' }}
             />
-            <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: '0.35rem', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-              <span>🔒</span> Defaults to your connected owner wallet ({formatShortAddress(wallet)}).
+            <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: '0.35rem' }}>
+              Defaults to your connected owner wallet ({formatShortAddress(wallet)}).
             </div>
           </div>
 
@@ -354,7 +354,7 @@ export default function CashoutModal({ isOpen, onClose, onSuccess }) {
               </>
             ) : (
               <>
-                <span>⚡ Withdraw {amount ? `${amount} MON` : 'MON'} to Monad Wallet</span>
+                <span>Withdraw {amount ? `${amount} MON` : 'MON'} to Monad Wallet</span>
               </>
             )}
           </button>
@@ -425,7 +425,7 @@ export default function CashoutModal({ isOpen, onClose, onSuccess }) {
           fontSize: '0.72rem', color: 'var(--text-muted)', textAlign: 'center',
           marginTop: '1.25rem', marginBottom: 0,
         }}>
-          ⚡ Monad Testnet instant settlement. Gas fees are sponsored by the ECLIPSE protocol.
+          Monad Testnet instant settlement. Gas fees are sponsored by the ECLIPSE protocol.
         </p>
       </div>
     </div>

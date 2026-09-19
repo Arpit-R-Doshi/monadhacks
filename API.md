@@ -1,228 +1,257 @@
-# 🔌 ECLIPSE.AI Developer API Documentation
+# ECLIPSE.AI API Reference
 
-ECLIPSE.AI provides an OpenAI-compatible REST API allowing AI agents, autonomous bots, backend services, and Python/Node.js scripts to execute inference against decentralized models hosted on the Monad network.
+Base URL: `http://localhost:3001`
 
----
-
-## 📑 Table of Contents
-
-- [1. Authentication](#1-authentication)
-- [2. Base URLs](#2-base-urls)
-- [3. OpenAI-Compatible Chat Completions](#3-openai-compatible-chat-completions)
-- [4. Platform Endpoints](#4-platform-endpoints)
-  - [4.1 POST /api/execute (Direct Execution)](#41-post-apiexecute-direct-execution)
-  - [4.2 GET /api/models (List Marketplace Models)](#42-get-apimodels-list-marketplace-models)
-  - [4.3 GET /api/compute/nodes (Active Compute Nodes)](#43-get-apicomputenodes-active-compute-nodes)
-  - [4.4 GET /api/user/purchases (User Purchase History)](#44-get-apiuserpurchases-user-purchase-history)
-  - [4.5 GET /api/user/prompts (Prompt & Token Usage Ledger)](#45-get-apiuserprompts-prompt--token-usage-ledger)
-  - [4.6 POST /api/user/cashout (Owner MON Cashout)](#46-post-apiusercashout-owner-mon-cashout)
-- [5. Rate Limiting & Spend Caps](#5-rate-limiting--spend-caps)
-- [6. Code Examples (Python, JavaScript, cURL)](#6-code-examples-python-javascript-curl)
+All endpoints that require a wallet address use it as a path parameter or in the request body.
 
 ---
 
-## 1. Authentication
+## Models
 
-All requests to `/api/v1/*` endpoints require a Bearer token generated from the [Developer Dashboard](http://localhost:5173/dashboard):
+### GET /api/models
+List all registered AI models.
 
-```http
-Authorization: Bearer ecl_live_xxxxxxxxxxxxxxxxxxxxxxxx
-```
-
-API Keys are:
-- Scoped to your connected Web3 wallet address.
-- Protected by sliding-window rate limits (`15`, `30`, `60`, `120`, or `300` RPM).
-- Configurable with lifetime request caps and maximum native `MON` spend caps.
-
----
-
-## 2. Base URLs
-
-| Environment | Base URL |
-|:---|:---|
-| **Local Development** | `http://localhost:3001` |
-| **Vercel / Production** | `https://your-domain.vercel.app` |
-
----
-
-## 3. OpenAI-Compatible Chat Completions
-
-```http
-POST /api/v1/chat/completions
-```
-
-Drop-in replacement for `api.openai.com/v1/chat/completions`. Use existing OpenAI client libraries without code modifications.
-
-### Request Headers
-```http
-Content-Type: application/json
-Authorization: Bearer ecl_live_xxxxxxxxxxxxxxxxxxxxxxxx
-```
-
-### Request Body
+**Response:**
 ```json
 {
-  "model": "llama-3.3-70b-versatile",
-  "messages": [
+  "success": true,
+  "models": [
     {
-      "role": "system",
-      "content": "You are a decentralized AI assistant on Monad."
-    },
-    {
-      "role": "user",
-      "content": "Explain parallel EVM execution on Monad in 2 sentences."
+      "id": "llama3-8b-demo",
+      "name": "Llama 3 8B",
+      "description": "...",
+      "category": "text-generation",
+      "price_per_use": 0.2,
+      "rate_limit": 10,
+      "total_uses": 42
     }
-  ],
-  "temperature": 0.7,
-  "max_tokens": 1024
+  ]
 }
 ```
 
-### Response (200 OK)
+### GET /api/models/:id
+Get a single model by ID.
+
+### POST /api/models/register
+Register a new AI model.
+
+**Body:**
 ```json
 {
-  "id": "chatcmpl-ecl-9b2e1f40",
-  "object": "chat.completion",
-  "created": 1726738800,
-  "model": "llama-3.3-70b-versatile",
-  "choices": [
-    {
-      "index": 0,
-      "message": {
-        "role": "assistant",
-        "content": "Monad achieves 10,000 TPS by decoupling transaction execution from consensus and executing independent transactions in parallel using optimistic concurrency control. Conflicts are automatically detected and re-executed, ensuring full EVM equivalence at massive scale."
-      },
-      "finish_reason": "stop"
-    }
-  ],
-  "usage": {
-    "prompt_tokens": 28,
-    "completion_tokens": 42,
-    "total_tokens": 70
-  },
-  "eclipse_metadata": {
-    "engine": "groq-cloud",
-    "compute_latency_ms": 192,
-    "cost_mon": 0.001
+  "walletAddress": "0x...",
+  "name": "My Model",
+  "description": "...",
+  "category": "text-generation",
+  "pricePerUse": 0.2,
+  "rateLimit": 10,
+  "baseModel": "llama-3.3-70b-versatile"
+}
+```
+
+---
+
+## Payments & Subscriptions
+
+### GET /api/payments/subscription/:wallet/:modelId
+Check if a wallet has an active subscription.
+
+**Response:**
+```json
+{
+  "success": true,
+  "subscription": {
+    "id": "sub_...",
+    "tokens_allocated": 50000,
+    "tokens_used": 1200,
+    "expires_at": "2026-10-19T..."
   }
 }
 ```
 
----
+### POST /api/payments/subscribe
+Subscribe to a model (pay-per-month).
 
-## 4. Platform Endpoints
-
-### 4.1 POST `/api/execute`
-Direct execution endpoint used by the Web UI and custom integrations.
-
+**Body:**
 ```json
 {
-  "modelId": "llama-3.3-70b-versatile",
-  "prompt": "Write a smart contract in Solidity for a token faucet.",
-  "userAddress": "0x75199c1aa8F21Eb583027BbB6763B7c79CC180D6",
-  "sessionId": "b2dfa508-b129-4ce4-8c43-4b3a5f3a148d",
+  "walletAddress": "0x...",
+  "modelId": "llama3-8b-demo",
+  "txHash": "0x..."
+}
+```
+
+### GET /api/payments/owner-earnings/:wallet
+Get withdrawable earnings for a model owner.
+
+**Response:**
+```json
+{
+  "success": true,
+  "earnings": {
+    "totalEarnings": 12.5,
+    "totalWithdrawn": 4.0,
+    "withdrawableAmount": 8.5,
+    "currency": "MON"
+  }
+}
+```
+
+### POST /api/payments/cashout
+Withdraw earnings to a Monad wallet (on-chain transfer).
+
+**Body:**
+```json
+{
+  "walletAddress": "0x...",
+  "amount": 5.0,
+  "recipientAddress": "0x..."
+}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "txHash": "0x...",
+  "explorerUrl": "https://testnet.monadexplorer.com/tx/0x..."
+}
+```
+
+---
+
+## Inference (Execution)
+
+### POST /api/execution/run
+Submit a prompt to a model for inference.
+
+**Body:**
+```json
+{
+  "walletAddress": "0x...",
+  "modelId": "llama3-8b-demo",
+  "prompt": "Explain quantum computing",
   "nodeId": "groq-cloud"
 }
 ```
 
-### 4.2 GET `/api/models`
-Returns all registered and verified models in the marketplace, including single-digit MON pricing, owner address, context windows, and latency.
-
-### 4.3 GET `/api/compute/nodes`
-Returns the status, latency, and operational health of all inference compute nodes (Groq Cloud LPU engine and decentralized edge Ollama nodes).
-
-### 4.4 GET `/api/user/purchases?wallet=0x...`
-Fetches a user's subscription and pay-per-use transaction history with on-chain transaction hashes, block explorer links, and expiration timestamps.
-
-### 4.5 GET `/api/user/prompts?wallet=0x...`
-Fetches the complete prompt execution and token consumption ledger for the specified wallet, including input tokens, output tokens, compute node, and transaction receipts.
-
-### 4.6 POST `/api/user/cashout`
-Initiates owner earnings payout strictly in native **MON** tokens.
+**Response:**
 ```json
 {
-  "ownerAddress": "0x75199c1aa8F21Eb583027BbB6763B7c79CC180D6"
+  "success": true,
+  "response": "Quantum computing uses...",
+  "inputTokens": 12,
+  "outputTokens": 180,
+  "duration": 920,
+  "node": "groq-cloud"
+}
+```
+
+### GET /api/execution/nodes
+List all available compute nodes and their health status.
+
+**Response:**
+```json
+{
+  "success": true,
+  "nodes": [
+    {
+      "id": "groq-cloud",
+      "name": "Groq Cloud Engine",
+      "healthy": true,
+      "models": ["llama-3.3-70b-versatile", "gemma2-9b-it"]
+    },
+    {
+      "id": "ollama-local",
+      "name": "Local Ollama Node",
+      "healthy": false
+    }
+  ]
 }
 ```
 
 ---
 
-## 5. Rate Limiting & Spend Caps
+## History
 
-Every developer API key enforces:
-1. **Sliding-Window RPM**: Tracked dynamically across the past 60-second window.
-2. **Lifetime Request Quota**: Prevents rogue scripts from exceeding a developer's allocated budget.
-3. **MON Spend Cap**: Hard ceiling in native MON tokens.
+### GET /api/history/prompts/:wallet
+Get all prompt records for a wallet.
 
-### Rate Limit Headers Returned
-```http
-X-RateLimit-Limit: 60
-X-RateLimit-Remaining: 57
-X-RateLimit-Reset: 1726738860
-```
+### GET /api/history/sessions/:wallet
+Get chat sessions grouped by model.
 
-### Rate Limit Exceeded (HTTP 429)
-```json
-{
-  "error": "Rate limit exceeded. Your key is capped at 60 requests per minute.",
-  "retry_after_seconds": 12
-}
-```
+### GET /api/history/session/:sessionId
+Get all messages for a specific session.
 
 ---
 
-## 6. Code Examples (Python, JavaScript, cURL)
+## API Keys
 
-### Python (OpenAI SDK)
-```python
-from openai import OpenAI
+### POST /api/apikeys/generate
+Generate a new API key.
 
-client = OpenAI(
-    base_url="http://localhost:3001/api/v1",
-    api_key="ecl_live_xxxxxxxxxxxxxxxxxxxxxxxx"
-)
-
-response = client.chat.completions.create(
-    model="llama-3.3-70b-versatile",
-    messages=[
-        {"role": "system", "content": "You are a quantitative finance expert."},
-        {"role": "user", "content": "What is the capital asset pricing model?"}
-    ]
-)
-
-print(response.choices[0].message.content)
-```
-
-### JavaScript / Node.js
-```javascript
-import OpenAI from 'openai';
-
-const openai = new OpenAI({
-  baseURL: 'http://localhost:3001/api/v1',
-  apiKey: 'ecl_live_xxxxxxxxxxxxxxxxxxxxxxxx',
-});
-
-async function main() {
-  const completion = await openai.chat.completions.create({
-    model: 'llama-3.3-70b-versatile',
-    messages: [{ role: 'user', content: 'Generate a Monad deploy script in Foundry.' }],
-  });
-
-  console.log(completion.choices[0].message.content);
+**Body:**
+```json
+{
+  "walletAddress": "0x...",
+  "name": "Production",
+  "rateLimitRpm": 60,
+  "usageLimitRequests": 0,
+  "usageLimitMon": 0
 }
-
-main();
 ```
 
-### cURL
+**Response:**
+```json
+{
+  "success": true,
+  "apiKey": "ecl_live_...",
+  "keyId": "key_..."
+}
+```
+
+> The full API key is only returned once. Store it securely.
+
+### GET /api/apikeys/list/:wallet
+List all API keys for a wallet (without the full key value).
+
+### DELETE /api/apikeys/:keyId
+Revoke an API key.
+
+---
+
+## Using API Keys
+
+Include your API key in the `Authorization` header:
+
+```
+Authorization: Bearer ecl_live_your_key_here
+```
+
+**Example:**
 ```bash
 curl -X POST http://localhost:3001/api/v1/chat/completions \
   -H "Content-Type: application/json" \
-  -H "Authorization: Bearer ecl_live_xxxxxxxxxxxxxxxxxxxxxxxx" \
+  -H "Authorization: Bearer ecl_live_your_key_here" \
   -d '{
     "model": "llama-3.3-70b-versatile",
-    "messages": [
-      { "role": "user", "content": "Hello from Monad!" }
-    ]
+    "messages": [{"role": "user", "content": "Hello!"}]
   }'
+```
+
+---
+
+## Health Check
+
+### GET /api/health
+Returns service status.
+
+```json
+{
+  "status": "ok",
+  "services": {
+    "database": { "connected": true },
+    "blockchain": { "connected": true },
+    "compute": { "healthy": true }
+  }
+}
 ```

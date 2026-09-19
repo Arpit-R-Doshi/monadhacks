@@ -71,7 +71,7 @@ export default function Dashboard() {
       });
       const data = await res.json();
       if (data.success) {
-        toast.success('API key generated! Copy it now — it won\'t be shown again.');
+        toast.success('API key generated! Copy it now - it won\'t be shown again.');
         setJustCreatedKey(data.key.apiKey);
         setNewKeyName('');
         setNewKeyMaxReqs('');
@@ -223,30 +223,7 @@ console.log("Remaining balance:", data.eclipse.remaining_balance, "MON");`,
         <p style={{ color: 'var(--text-secondary)' }}>Your activity and usage overview</p>
       </div>
 
-      {/* Platform Status */}
-      {health && (
-        <motion.div className="card" style={{ marginBottom: '2rem', padding: '1.5rem', width: 'max-content' }} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.1 }}>
-          <h3 style={{ marginBottom: '1rem', fontSize: '1.4rem' }}>Platform Status</h3>
-          <div style={{ display: 'flex', gap: '2rem', flexWrap: 'wrap' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <span className={`status-badge ${health.services?.database?.connected ? 'completed' : 'failed'}`}>●</span>
-              Database
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <span className={`status-badge ${health.services?.blockchain?.connected ? 'completed' : 'pending'}`}>●</span>
-              Blockchain {health.services?.blockchain?.connected ? '' : '(Sim)'}
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <span className={`status-badge ${health.services?.ipfs?.connected ? 'completed' : 'pending'}`}>●</span>
-              IPFS {health.services?.ipfs?.mode === 'simulation' ? '(Sim)' : ''}
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <span className={`status-badge ${health.services?.compute?.healthy ? 'completed' : 'pending'}`}>●</span>
-              Compute {health.services?.compute?.healthy ? '' : '(Sim)'}
-            </div>
-          </div>
-        </motion.div>
-      )}
+
 
       {/* Active Subscriptions */}
       <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.2 }}>
@@ -269,7 +246,7 @@ console.log("Remaining balance:", data.eclipse.remaining_balance, "MON");`,
                         <div className="model-name">{sub.model_name}</div>
                         <div className="model-category" style={{ fontSize: '0.7rem' }}>Expires: {new Date(sub.expires_at).toLocaleDateString()}</div>
                       </div>
-                      <span className="status-badge completed" style={{ marginLeft: 'auto' }}>● Active</span>
+                      <span className="status-badge completed" style={{ marginLeft: 'auto' }}> Active</span>
                     </div>
                     
                     <div style={{ marginTop: '1rem' }}>
@@ -292,13 +269,6 @@ console.log("Remaining balance:", data.eclipse.remaining_balance, "MON");`,
         <motion.div className="card stat-card" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
           <div className="stat-value">{typeof balance === 'number' ? balance.toFixed(3) : balance}</div>
           <div className="stat-label">MON Balance (Monad)</div>
-          <button
-            className="btn btn-primary btn-sm"
-            style={{ marginTop: '0.75rem', width: '100%' }}
-            onClick={() => setShowBuyModal(true)}
-          >
-            ⚡ Get MON Tokens
-          </button>
         </motion.div>
 
         <motion.div className="card stat-card" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
@@ -312,48 +282,11 @@ console.log("Remaining balance:", data.eclipse.remaining_balance, "MON");`,
         </motion.div>
 
         <motion.div className="card stat-card" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
-          <div className="stat-value">{computeNodes.filter(n => n.healthy).length}/{computeNodes.length}</div>
-          <div className="stat-label">Nodes Online</div>
+          <div className="stat-value">{computeNodes.length}</div>
+          <div className="stat-label">Nodes Available</div>
         </motion.div>
       </div>
 
-      {/* Compute Nodes Panel */}
-      {computeNodes.length > 0 && (
-        <motion.div className="card" style={{ marginBottom: '2rem', padding: '1.5rem' }} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.35 }}>
-          <h3 style={{ marginBottom: '1rem', fontSize: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            Compute Nodes
-            <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 400 }}>{computeNodes.filter(n => n.healthy).length} online</span>
-          </h3>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: '0.75rem' }}>
-            {computeNodes.map(node => (
-              <div key={node.id} style={{
-                background: 'rgba(255,255,255,0.03)', border: `1px solid ${node.healthy ? 'rgba(16,185,129,0.3)' : 'rgba(244,67,54,0.3)'}`,
-                borderRadius: '10px', padding: '1rem',
-              }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
-                  <span style={{ fontSize: '1.2rem' }}>{node.icon}</span>
-                  <span style={{ fontWeight: 700, fontSize: '0.9rem' }}>{node.name}</span>
-                  <span className={`status-badge ${node.healthy ? 'completed' : 'failed'}`} style={{ marginLeft: 'auto', fontSize: '0.7rem' }}>
-                    {node.healthy ? '● Online' : '● Offline'}
-                  </span>
-                </div>
-                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{node.location}</div>
-                <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '0.25rem' }}>{node.specs}</div>
-                {node.healthy && node.models && (
-                  <div style={{ display: 'flex', gap: '0.3rem', flexWrap: 'wrap', marginTop: '0.5rem' }}>
-                    {node.models.map(m => (
-                      <span key={m} style={{
-                        fontSize: '0.65rem', padding: '0.15rem 0.4rem', borderRadius: '4px',
-                        background: 'rgba(167,139,250,0.1)', color: '#a78bfa', border: '1px solid rgba(167,139,250,0.2)',
-                      }}>{m}</span>
-                    ))}
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
-        </motion.div>
-      )}
 
       {/* (Moved Platform Status) */}
 
@@ -367,16 +300,17 @@ console.log("Remaining balance:", data.eclipse.remaining_balance, "MON");`,
         {/* Per-Model API Pricing */}
         {models.length > 0 && (
           <div style={{ marginBottom: '1.5rem' }}>
-            <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '0.5rem', fontWeight: 600 }}>API Pricing (pay per call)</div>
+            <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)', marginBottom: '0.5rem', fontWeight: 600, fontFamily: 'var(--font)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>API Pricing (pay per call)</div>
             <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
               {models.filter(m => m.is_active).map(m => (
                 <div key={m.id} style={{
                   display: 'flex', alignItems: 'center', gap: '0.4rem',
-                  background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)',
-                  borderRadius: '8px', padding: '0.35rem 0.65rem', fontSize: '0.75rem',
+                  background: '#16162a', border: '1px solid rgba(79,70,229,0.25)',
+                  borderRadius: '8px', padding: '0.35rem 0.75rem', fontSize: 'var(--text-sm)',
+                  fontFamily: 'var(--font)',
                 }}>
                   <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{m.name}</span>
-                  <span style={{ color: '#a78bfa', fontWeight: 700 }}>{m.price_per_use} MON</span>
+                  <span style={{ color: '#818cf8', fontWeight: 700 }}>{m.price_per_use} MON</span>
                   <span style={{ color: 'var(--text-muted)' }}>/call</span>
                 </div>
               ))}
@@ -385,9 +319,9 @@ console.log("Remaining balance:", data.eclipse.remaining_balance, "MON");`,
         )}
 
         {/* Generate Key & Limit Controls */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '0.75rem', marginBottom: '1.5rem', background: 'rgba(255,255,255,0.02)', padding: '1rem', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.06)' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '0.75rem', marginBottom: '1.5rem', background: '#16162a', padding: '1rem', borderRadius: '10px', border: '1px solid rgba(79,70,229,0.2)' }}>
           <div>
-            <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'block', marginBottom: '0.25rem' }}>Key Name</label>
+            <label style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)', display: 'block', marginBottom: '0.25rem', fontFamily: 'var(--font)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Key Name</label>
             <input
               type="text"
               placeholder="e.g. Production, Dev"
@@ -395,21 +329,23 @@ console.log("Remaining balance:", data.eclipse.remaining_balance, "MON");`,
               onChange={(e) => setNewKeyName(e.target.value)}
               style={{
                 width: '100%', padding: '0.55rem 0.8rem',
-                background: 'var(--bg-highlight)', border: '1px solid var(--border-color)',
-                borderRadius: '6px', color: 'var(--text-primary)', fontSize: '0.85rem',
+                background: '#0d0d20', border: '1px solid rgba(79,70,229,0.25)',
+                borderRadius: '6px', color: 'var(--text-primary)', fontSize: 'var(--text-sm)',
+                fontFamily: 'var(--font)',
               }}
             />
           </div>
 
           <div>
-            <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'block', marginBottom: '0.25rem' }}>Rate Limit (RPM)</label>
+            <label style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)', display: 'block', marginBottom: '0.25rem', fontFamily: 'var(--font)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Rate Limit (RPM)</label>
             <select
               value={newKeyRpm}
               onChange={(e) => setNewKeyRpm(Number(e.target.value))}
               style={{
                 width: '100%', padding: '0.55rem 0.8rem',
-                background: 'var(--bg-highlight)', border: '1px solid var(--border-color)',
-                borderRadius: '6px', color: 'var(--text-primary)', fontSize: '0.85rem',
+                background: '#0d0d20', border: '1px solid rgba(79,70,229,0.25)',
+                borderRadius: '6px', color: 'var(--text-primary)', fontSize: 'var(--text-sm)',
+                fontFamily: 'var(--font)',
               }}
             >
               <option value={15}>15 req / min</option>
@@ -421,7 +357,7 @@ console.log("Remaining balance:", data.eclipse.remaining_balance, "MON");`,
           </div>
 
           <div>
-            <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'block', marginBottom: '0.25rem' }}>Request Cap (0 = Unlimited)</label>
+            <label style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)', display: 'block', marginBottom: '0.25rem', fontFamily: 'var(--font)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Request Cap (0 = Unlimited)</label>
             <input
               type="number"
               placeholder="e.g. 500"
@@ -430,14 +366,15 @@ console.log("Remaining balance:", data.eclipse.remaining_balance, "MON");`,
               min="0"
               style={{
                 width: '100%', padding: '0.55rem 0.8rem',
-                background: 'var(--bg-highlight)', border: '1px solid var(--border-color)',
-                borderRadius: '6px', color: 'var(--text-primary)', fontSize: '0.85rem',
+                background: '#0d0d20', border: '1px solid rgba(79,70,229,0.25)',
+                borderRadius: '6px', color: 'var(--text-primary)', fontSize: 'var(--text-sm)',
+                fontFamily: 'var(--font)',
               }}
             />
           </div>
 
           <div>
-            <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'block', marginBottom: '0.25rem' }}>Budget Cap (MON, 0 = Unlimited)</label>
+            <label style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)', display: 'block', marginBottom: '0.25rem', fontFamily: 'var(--font)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Budget Cap (MON, 0 = Unlimited)</label>
             <input
               type="number"
               placeholder="e.g. 10.0"
@@ -447,8 +384,9 @@ console.log("Remaining balance:", data.eclipse.remaining_balance, "MON");`,
               step="0.5"
               style={{
                 width: '100%', padding: '0.55rem 0.8rem',
-                background: 'var(--bg-highlight)', border: '1px solid var(--border-color)',
-                borderRadius: '6px', color: 'var(--text-primary)', fontSize: '0.85rem',
+                background: '#0d0d20', border: '1px solid rgba(79,70,229,0.25)',
+                borderRadius: '6px', color: 'var(--text-primary)', fontSize: 'var(--text-sm)',
+                fontFamily: 'var(--font)',
               }}
             />
           </div>
@@ -457,8 +395,8 @@ console.log("Remaining balance:", data.eclipse.remaining_balance, "MON");`,
             <button
               onClick={generateKey}
               disabled={generatingKey}
-              className="btn-primary"
-              style={{ width: '100%', padding: '0.6rem 1.2rem', fontSize: '0.85rem', borderRadius: '6px', cursor: 'pointer', height: '36px' }}
+              className="btn btn-primary"
+              style={{ width: '100%', padding: '0.6rem 1.2rem', fontSize: 'var(--text-sm)', borderRadius: '6px', cursor: 'pointer', height: '36px' }}
             >
               {generatingKey ? 'Generating...' : '+ Generate Key'}
             </button>
@@ -472,7 +410,7 @@ console.log("Remaining balance:", data.eclipse.remaining_balance, "MON");`,
             borderRadius: '10px', padding: '1rem', marginBottom: '1.5rem',
           }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
-              <span style={{ fontWeight: 700, color: '#059669', fontSize: '0.85rem' }}>Warning: Copy your API key now — it won't be shown again!</span>
+              <span style={{ fontWeight: 700, color: '#059669', fontSize: '0.85rem' }}>Warning: Copy your API key now - it won't be shown again!</span>
               <button onClick={() => setJustCreatedKey(null)} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontSize: '1.2rem' }}>×</button>
             </div>
             <div style={{
@@ -524,7 +462,7 @@ console.log("Remaining balance:", data.eclipse.remaining_balance, "MON");`,
                       {k.usage_limit_requests > 0 ? (
                         <span style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}> / {k.usage_limit_requests}</span>
                       ) : (
-                        <span style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}> / ∞</span>
+                        <span style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}> / inf</span>
                       )}
                     </td>
                     <td>
@@ -532,12 +470,12 @@ console.log("Remaining balance:", data.eclipse.remaining_balance, "MON");`,
                       {k.usage_limit_mon > 0 ? (
                         <span style={{ color: '#a78bfa', fontSize: '0.75rem' }}> / {Number(k.usage_limit_mon).toFixed(1)} MON</span>
                       ) : (
-                        <span style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}> / ∞</span>
+                        <span style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}> / inf</span>
                       )}
                     </td>
                     <td>
                       <span className={`status-badge ${k.is_active ? 'completed' : 'failed'}`}>
-                        {k.is_active ? '● Active' : '● Revoked'}
+                        {k.is_active ? ' Active' : ' Revoked'}
                       </span>
                     </td>
                     <td>
@@ -560,65 +498,6 @@ console.log("Remaining balance:", data.eclipse.remaining_balance, "MON");`,
           </div>
         )}
 
-        {/* Code Snippets */}
-        <div style={{ marginTop: '0.5rem' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', flexWrap: 'wrap', gap: '0.75rem' }}>
-            <h4 style={{ margin: 0, fontSize: '1rem', fontWeight: 600 }}>📄 Quick Start Code</h4>
-            <select
-              value={selectedModel}
-              onChange={(e) => setSelectedModel(e.target.value)}
-              style={{
-                background: 'var(--bg-highlight)', border: '1px solid var(--border-color)',
-                borderRadius: '6px', color: 'var(--text-primary)', padding: '0.4rem 0.8rem', fontSize: '0.8rem',
-              }}
-            >
-              {models.map(m => (
-                <option key={m.id} value={m.id}>{m.name}</option>
-              ))}
-              {models.length === 0 && <option value="gemma-2b-demo">Gemma 2B</option>}
-            </select>
-          </div>
-
-          {/* Tabs */}
-          <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem' }}>
-            {['curl', 'python', 'javascript'].map(tab => (
-              <button
-                key={tab}
-                onClick={() => setSnippetTab(tab)}
-                style={{
-                  padding: '0.4rem 1rem', borderRadius: '6px', fontSize: '0.8rem', cursor: 'pointer',
-                  background: snippetTab === tab ? 'var(--accent-primary)' : 'var(--bg-highlight)',
-                  color: snippetTab === tab ? '#fff' : 'var(--text-secondary)',
-                  border: snippetTab === tab ? 'none' : '1px solid var(--border-color)',
-                  textTransform: 'capitalize', fontWeight: snippetTab === tab ? 600 : 400,
-                }}
-              >
-                {tab === 'curl' ? 'cURL' : tab === 'python' ? 'Python' : 'JavaScript'}
-              </button>
-            ))}
-          </div>
-
-          {/* Code Block */}
-          <div style={{ position: 'relative' }}>
-            <button
-              onClick={() => copyToClipboard(snippets[snippetTab])}
-              style={{
-                position: 'absolute', top: '0.75rem', right: '0.75rem', zIndex: 2,
-                background: 'rgba(167,139,250,0.2)', color: '#a78bfa', border: '1px solid rgba(167,139,250,0.3)',
-                padding: '0.3rem 0.7rem', borderRadius: '5px', cursor: 'pointer', fontSize: '0.75rem',
-              }}
-            >
-              📋 Copy
-            </button>
-            <pre style={{
-              background: '#0d0d1a', border: '1px solid var(--border-color)', borderRadius: '10px',
-              padding: '1.25rem', overflowX: 'auto', fontSize: '0.8rem', lineHeight: 1.6,
-              color: '#c5c5d2', fontFamily: "'JetBrains Mono', 'Fira Code', monospace",
-            }}>
-              <code>{snippets[snippetTab]}</code>
-            </pre>
-          </div>
-        </div>
       </motion.div>
 
       {/* (Moved Active Subscriptions) */}
@@ -639,7 +518,7 @@ console.log("Remaining balance:", data.eclipse.remaining_balance, "MON");`,
               background: 'rgba(139,92,246,0.15)', padding: '0.35rem 0.75rem', borderRadius: '6px',
             }}
           >
-            View Full History & Purchases →
+            View Full History & Purchases 
           </Link>
         </div>
 
@@ -691,11 +570,11 @@ console.log("Remaining balance:", data.eclipse.remaining_balance, "MON");`,
                         </span>
                       </td>
                       <td style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                        {p.duration_ms ? `${(p.duration_ms / 1000).toFixed(2)}s` : '—'}
+                        {p.duration_ms ? `${(p.duration_ms / 1000).toFixed(2)}s` : '-'}
                       </td>
                       <td>
                         <span className={`status-badge ${p.status}`}>
-                          {p.status === 'completed' ? '✓' : '⏳'} {p.status}
+                          {p.status === 'completed' ? '' : '...'} {p.status}
                         </span>
                       </td>
                       <td>
@@ -707,7 +586,7 @@ console.log("Remaining balance:", data.eclipse.remaining_balance, "MON");`,
                               rel="noreferrer"
                               style={{ fontSize: '0.7rem', color: '#a78bfa', textDecoration: 'none', background: 'rgba(139,92,246,0.15)', padding: '0.15rem 0.4rem', borderRadius: '4px' }}
                             >
-                              Monad ↗
+                              Monad 
                             </a>
                           ) : (
                             <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>On-chain</span>

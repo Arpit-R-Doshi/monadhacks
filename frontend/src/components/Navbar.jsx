@@ -46,6 +46,11 @@ export default function Navbar() {
             </Link>
           </>
         )}
+        {userRole === 'worker' && (
+          <Link to="/worker" className={isActive('/worker')}>
+            Compute Dashboard
+          </Link>
+        )}
       </div>
 
       <div className="navbar-actions">
@@ -60,7 +65,7 @@ export default function Navbar() {
         )}
         {wallet && (
           <div className="balance-badge" title="Monad Testnet Balance">
-            <span className="balance-icon">⟠</span>
+            <span className="balance-icon"></span>
             <span>{typeof balance === 'number' ? balance.toFixed(3) : balance}</span>
             <span className="balance-unit">MON</span>
           </div>
