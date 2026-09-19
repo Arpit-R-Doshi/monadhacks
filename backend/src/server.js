@@ -8,8 +8,9 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 // Load environment variables
-dotenv.config({ path: join(__dirname, '..', '.env') });
-dotenv.config({ path: join(__dirname, '..', '..', '.env') });
+dotenv.config({ path: join(__dirname, '..', '.env'), override: true });
+dotenv.config({ path: join(__dirname, '..', '..', '.env'), override: true });
+console.log('[Config] OLLAMA_URL =', process.env.OLLAMA_URL);
 
 // Import modules
 import { initDB } from './db/sqlite.js';

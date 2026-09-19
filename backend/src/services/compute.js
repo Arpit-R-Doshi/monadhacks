@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const OLLAMA_URL = process.env.OLLAMA_URL || 'http://localhost:11434';
+function getOllamaUrl() { return process.env.OLLAMA_URL || 'http://localhost:11434'; }
 
 // Available models mapping
 const MODEL_MAP = {
@@ -16,14 +16,14 @@ const MODEL_MAP = {
  */
 export async function healthCheck() {
   try {
-    const res = await axios.get(`${OLLAMA_URL}/api/tags`, { timeout: 5000 });
+    const res = await axios.get(`${getOllamaUrl()}/api/tags`, { timeout: 5000 });
     return {
       healthy: true,
       models: res.data.models?.map(m => m.name) || [],
-      url: OLLAMA_URL,
+      url: getOllamaUrl(),
     };
   } catch (err) {
-    return { healthy: false, error: err.message, url: OLLAMA_URL };
+    return { healthy: false, error: err.message, url: getOllamaUrl() };
   }
 }
 
@@ -39,7 +39,7 @@ export async function runInference(modelName, prompt) {
   try {
     const startTime = Date.now();
 
-    const res = await axios.post(`${OLLAMA_URL}/api/generate`, {
+    const res = await axios.post(`${getOllamaUrl()}/api/generate`, {
       model: ollamaModel,
       prompt: prompt,
       stream: false,
@@ -104,7 +104,7 @@ function simulateInference(modelName, prompt) {
  */
 export async function listModels() {
   try {
-    const res = await axios.get(`${OLLAMA_URL}/api/tags`, { timeout: 5000 });
+    const res = await axios.get(`${getOllamaUrl()}/api/tags`, { timeout: 5000 });
     return res.data.models || [];
   } catch {
     return [
