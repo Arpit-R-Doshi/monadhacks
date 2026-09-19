@@ -116,10 +116,44 @@ export default function ModelDetail() {
             'function subscribe(string calldata _modelId, address _modelOwner, uint256 _quota, uint256 _duration) external payable'
           ]);
 
-      const gasOverrides = {
-        maxPriorityFeePerGas: parseGwei('40'),
-        maxFeePerGas: parseGwei('50'),
-      };
+      // Dynamic fee estimation with safe buffers for Monad Testnet
+      let gasOverrides = {};
+      try {
+        const fees = await publicClient.estimateFeesPerGas();
+        const bufferedMaxPriority = fees.maxPriorityFeePerGas 
+          ? (fees.maxPriorityFeePerGas * 130n) / 100n 
+          : parseGwei('5');
+        const bufferedMaxFee = fees.maxFeePerGas 
+          ? (fees.maxFeePerGas * 140n) / 100n 
+          : parseGwei('160');
+
+        gasOverrides = {
+          maxPriorityFeePerGas: bufferedMaxPriority,
+          maxFeePerGas: bufferedMaxFee,
+        };
+      } catch (feeErr) {
+        console.warn('[ModelDetail] Fee estimation fallback:', feeErr);
+        const currentGasPrice = await publicClient.getGasPrice();
+        gasOverrides = {
+          gasPrice: (currentGasPrice * 140n) / 100n,
+        };
+      }
+
+      // Estimate contract gas limit with 25% safety buffer
+      try {
+        const estimatedGas = await publicClient.estimateContractGas({
+          address: appConfig.addresses.PaymentManager,
+          abi: paymentAbi,
+          functionName: 'subscribe',
+          args: [id, model.owner_address, 50000n, 2592000n],
+          value: priceWei,
+          account: wallet,
+        });
+        gasOverrides.gas = (estimatedGas * 125n) / 100n;
+      } catch (gasErr) {
+        console.warn('[ModelDetail] Contract gas estimation warning:', gasErr);
+        gasOverrides.gas = 350000n;
+      }
 
       // Pre-flight: check on-chain native MON balance
       toast.loading('Checking Monad testnet balance...', { id: 'sub-tx' });
