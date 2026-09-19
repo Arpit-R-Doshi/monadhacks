@@ -27,7 +27,7 @@ export default function RoleSelect() {
         transition={{ duration: 0.5 }}
       >
         <div className="role-header">
-          <div className="role-logo">E</div>
+
           <h1>Welcome to <span className="gradient-text">ECLIPSE.AI</span></h1>
           <p>Choose how you want to use the decentralized AI marketplace</p>
         </div>

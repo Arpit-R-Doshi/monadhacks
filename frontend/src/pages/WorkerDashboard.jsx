@@ -22,7 +22,7 @@ export default function WorkerDashboard() {
 
   if (!wallet) {
     return (
-      <div className="page-container" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '60vh' }}>
+      <div className="worker-dashboard" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '60vh' }}>
         <div style={{ textAlign: 'center', padding: '2rem', background: 'rgba(255,255,255,0.03)', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)' }}>
           <h2 style={{ marginBottom: '1rem', color: 'var(--text-primary)' }}>Worker Not Found</h2>
           <p style={{ color: 'var(--text-secondary)' }}>Please connect a wallet to view the worker dashboard.</p>
@@ -32,7 +32,7 @@ export default function WorkerDashboard() {
   }
 
   return (
-    <div className="page-container">
+    <div className="worker-dashboard">
       <div className="dashboard-header" style={{ marginBottom: '2rem' }}>
         <div>
           <h1 className="page-title">Worker Dashboard</h1>

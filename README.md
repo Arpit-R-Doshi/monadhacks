@@ -73,6 +73,14 @@ PROMPT_EXECUTION_ADDRESS=0x...
 DEPLOYER_PRIVATE_KEY=0x...
 ```
 
+### 3. Deployed Contracts (Monad Testnet)
+
+The following smart contracts are actively deployed on the Monad Testnet (Chain ID 10143) and integrated into this prototype:
+
+- **Model Registry**: `0x2f02861ff42c0d04823dadd08326de0b07f57dfe`
+- **Payment Manager**: `0xaa2499494b61d293a437c6bd31ca22b88d8aa9b2`
+- **Prompt Execution**: `0x70dcf4d82c8e1b989d2a7a3c2303fa48a348d6c1`
+
 ### 3. Deploy Contracts (if needed)
 
 ```bash
