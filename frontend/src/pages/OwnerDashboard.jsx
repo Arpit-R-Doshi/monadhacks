@@ -208,7 +208,41 @@ export default function OwnerDashboard() {
                       <span className="amount">{model.subscription_price}</span>
                       <span className="unit">SYN / mo</span>
                     </div>
-                    <Link to={`/model/${model.id}`} className="btn btn-primary btn-sm">View Chat →</Link>
+                    <div style={{ display: 'flex', gap: '0.5rem' }}>
+                      <button 
+                        onClick={async () => {
+                          const subsCount = subStats.subscribers.find(s => s.model_id === model.id)?.count || 0;
+                          if (subsCount > 0) {
+                            alert(`Cannot remove: The model still has ${subsCount} active subscribers. Wait for their subscriptions to expire.`);
+                            return;
+                          }
+                          if (!confirm(`Are you sure you want to remove ${model.name}?`)) return;
+                          
+                          try {
+                            const res = await fetch(`${API_URL}/api/models/${model.id}`, {
+                              method: 'DELETE',
+                              headers: { 'Content-Type': 'application/json' },
+                              body: JSON.stringify({ ownerAddress: wallet })
+                            });
+                            const data = await res.json();
+                            if (data.success) {
+                               fetchMyModels();
+                            } else {
+                               alert(data.error);
+                            }
+                          } catch (err) {
+                            alert('Network error removing model.');
+                          }
+                        }}
+                        style={{
+                          background: 'rgba(244,67,54,0.1)', color: '#ef5350', border: '1px solid rgba(244,67,54,0.3)',
+                          padding: '0.4rem 0.8rem', borderRadius: '6px', cursor: 'pointer', fontSize: '0.8rem', fontWeight: 'bold'
+                        }}
+                      >
+                        Remove
+                      </button>
+                      <Link to={`/model/${model.id}`} className="btn btn-primary btn-sm">View Chat →</Link>
+                    </div>
                   </div>
                 </div>
               </motion.div>

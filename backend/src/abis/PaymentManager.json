@@ -4,7 +4,7 @@
   "function deductFromSubscription(address _user, string _modelId, uint256 _tokensUsed) returns (bool)",
   "function claimRewards()",
   "function hasActiveSubscription(address _user, string _modelId) view returns (bool)",
-  "function getSubscription(address _user, string _modelId) view returns (tuple(string modelId, uint256 tokenQuota, uint256 tokensUsed, uint256 expiresAt, bool isActive))",
+  "function getSubscription(address _user, string _modelId) view returns ((string modelId, uint256 tokenQuota, uint256 tokensUsed, uint256 expiresAt, bool isActive))",
   "function nodeRewards(address) view returns (uint256)",
   "function totalRevenue() view returns (uint256)",
   "function MODEL_OWNER_SHARE() view returns (uint256)",

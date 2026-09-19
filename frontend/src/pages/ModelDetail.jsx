@@ -2,11 +2,15 @@ import { useState, useEffect, useContext, useRef } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import toast from 'react-hot-toast';
+import { useWriteContract, usePublicClient } from 'wagmi';
+import { parseEther, parseGwei, parseAbi } from 'viem';
 import { AppContext } from '../App.jsx';
 
 export default function ModelDetail() {
   const { id } = useParams();
-  const { wallet, balance, API_URL, refreshBalance } = useContext(AppContext);
+  const { wallet, balance, API_URL, refreshBalance, appConfig } = useContext(AppContext);
+  const { writeContractAsync } = useWriteContract();
+  const publicClient = usePublicClient();
   const [model, setModel] = useState(null);
   const [messages, setMessages] = useState([]);
   const [historyLoaded, setHistoryLoaded] = useState(false);
@@ -68,30 +72,107 @@ export default function ModelDetail() {
   };
 
   const handleSubscribe = async () => {
-    if (!wallet) {
-      toast.error('Connect your wallet first');
+    if (!wallet || !appConfig) {
+      toast.error('Connect your wallet and wait for config to load.');
       return;
     }
     
     setSubscribing(true);
     try {
-      const res = await fetch(`${API_URL}/api/subscriptions/subscribe`, {
+      const price = model.subscription_price.toString();
+      const priceWei = parseEther(price);
+      const tokenAbi = parseAbi(appConfig.abis.SYN3RGYToken);
+      const paymentAbi = parseAbi(appConfig.abis.PaymentManager);
+      const gasOverrides = {
+        maxPriorityFeePerGas: parseGwei('40'),
+        maxFeePerGas: parseGwei('50'),
+      };
+      
+      // Pre-flight: check on-chain SYN balance
+      toast.loading('Checking on-chain balance...', { id: 'sub-tx' });
+      const onChainBal = await publicClient.readContract({
+        address: appConfig.addresses.SYN3RGYToken,
+        abi: tokenAbi,
+        functionName: 'balanceOf',
+        args: [wallet],
+      });
+      
+      if (onChainBal < priceWei) {
+        toast.error('Insufficient on-chain SYN tokens. Please claim faucet tokens first!', { id: 'sub-tx' });
+        setSubscribing(false);
+        return;
+      }
+      
+      // Step 1: Approve SYN tokens for PaymentManager
+      toast.loading('Step 1/3: Approve SYN tokens in MetaMask...', { id: 'sub-tx' });
+      const approveHash = await writeContractAsync({
+        address: appConfig.addresses.SYN3RGYToken,
+        abi: tokenAbi,
+        functionName: 'approve',
+        args: [appConfig.addresses.PaymentManager, priceWei],
+        ...gasOverrides,
+      });
+      
+      toast.loading('Step 1/3: Waiting for approval confirmation...', { id: 'sub-tx' });
+      const approveReceipt = await publicClient.waitForTransactionReceipt({ 
+        hash: approveHash,
+        confirmations: 1,
+        timeout: 120_000,
+      });
+      
+      if (approveReceipt.status === 'reverted') {
+        toast.error('Approval transaction reverted on-chain.', { id: 'sub-tx' });
+        setSubscribing(false);
+        return;
+      }
+      
+      // Buffer for Polygon RPC load-balancers
+      await new Promise(r => setTimeout(r, 3000));
+      
+      // Step 2: Subscribe on PaymentManager
+      toast.loading('Step 2/3: Confirm subscription in MetaMask...', { id: 'sub-tx' });
+      const subHash = await writeContractAsync({
+        address: appConfig.addresses.PaymentManager,
+        abi: paymentAbi,
+        functionName: 'subscribe',
+        args: [id, model.owner_address, 50000n, priceWei, 2592000n],
+        ...gasOverrides,
+      });
+      
+      toast.loading('Step 2/3: Waiting for subscription confirmation...', { id: 'sub-tx' });
+      const subReceipt = await publicClient.waitForTransactionReceipt({ 
+        hash: subHash,
+        confirmations: 1,
+        timeout: 120_000,
+      });
+      
+      if (subReceipt.status === 'reverted') {
+        toast.error('Subscription transaction reverted on-chain.', { id: 'sub-tx' });
+        setSubscribing(false);
+        return;
+      }
+
+      // Step 3: Synchronize SQLite read-index
+      toast.loading('Step 3/3: Syncing local index...', { id: 'sub-tx' });
+      const syncRes = await fetch(`${API_URL}/api/subscriptions/sync`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ userAddress: wallet, modelId: id }),
       });
-      const data = await res.json();
+      const data = await syncRes.json();
       
       if (data.success) {
-        toast.success(data.message);
+        toast.success('🎉 Subscribed on-chain successfully!', { id: 'sub-tx' });
         setSubscribed(true);
         refreshBalance();
         checkSubscription();
       } else {
-        toast.error(data.error || 'Subscription failed');
+        toast.error(data.error || 'Sync failed', { id: 'sub-tx' });
       }
     } catch (err) {
-      toast.error('Network error during subscription');
+      const msg = err?.shortMessage || err?.cause?.shortMessage || err?.message || 'Transaction error';
+      toast.error(msg, { id: 'sub-tx' });
+      console.error('[Web3 Subscribe Error]', err);
     }
     setSubscribing(false);
   };
@@ -268,6 +349,29 @@ export default function ModelDetail() {
           <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
             <h3>💬 Run Inference</h3>
             <span className="status-badge completed">● Live</span>
+            {messages.length > 0 && (
+              <button
+                onClick={() => {
+                  setMessages([]);
+                  setHistoryLoaded(true);
+                  setPrompt('');
+                  setImageFile(null);
+                  setImageBase64('');
+                  toast.success('New chat started');
+                }}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: '0.4rem',
+                  background: 'rgba(167,139,250,0.1)', color: '#a78bfa',
+                  border: '1px solid rgba(167,139,250,0.3)', padding: '0.35rem 0.9rem',
+                  borderRadius: '8px', cursor: 'pointer', fontSize: '0.8rem', fontWeight: 600,
+                  transition: 'all 0.2s ease',
+                }}
+                onMouseOver={(e) => { e.currentTarget.style.background = 'rgba(167,139,250,0.25)'; }}
+                onMouseOut={(e) => { e.currentTarget.style.background = 'rgba(167,139,250,0.1)'; }}
+              >
+                ✨ New Chat
+              </button>
+            )}
           </div>
           
           <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>

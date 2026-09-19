@@ -9,14 +9,15 @@ import {
   getUserSubscriptions,
   getOwnerSubscriptionStats
 } from '../db/sqlite.js';
+import { hasActiveSubscription } from '../services/blockchain.js';
 
 const router = Router();
 
 /**
- * POST /api/subscriptions/subscribe
- * Subscribes a user to a model using SYN tokens
+ * POST /api/subscriptions/sync
+ * Syncs a layer-2 on-chain subscription to the fast local SQLite read-index
  */
-router.post('/subscribe', (req, res) => {
+router.post('/sync', async (req, res) => {
   try {
     const { userAddress, modelId } = req.body;
 
@@ -29,43 +30,35 @@ router.post('/subscribe', (req, res) => {
       return res.status(404).json({ error: 'Model not found' });
     }
 
-    const user = getOrCreateUser(userAddress);
-    if (user.balance < model.subscription_price) {
-      return res.status(402).json({ error: 'Insufficient SYN balance for subscription' });
+    // Verify on-chain presence
+    const isValid = await hasActiveSubscription(userAddress, modelId);
+    if (!isValid) {
+      return res.status(403).json({ error: 'No active subscription found on Polygon Amoy for this wallet.' });
     }
 
-    // Check if an active subscription already exists
+    // Check if an active subscription already exists locally
     const existing = getSubscription(userAddress, modelId);
     if (existing) {
-      return res.status(400).json({ error: 'Already actively subscribed to this model' });
+      return res.json({ success: true, message: 'Already synced.' });
     }
 
-    // Process Payment
-    // Deduct from user
-    updateUserBalance(userAddress, -model.subscription_price);
-    
-    // Credit to owner
-    getOrCreateUser(model.owner_address); // Ensure owner exists in DB
-    updateUserBalance(model.owner_address, model.subscription_price);
-
-    // Create Subscription
+    // Create Subscription internally for fast dashboard querying
     const subId = uuidv4();
     createSubscription({
       id: subId,
       userAddress,
       modelId,
-      tokensAllocated: 50000, // Hardcoded 50k tokens per month for now
+      tokensAllocated: 50000,
     });
 
     res.json({
       success: true,
       subscriptionId: subId,
-      newBalance: user.balance - model.subscription_price,
-      message: 'Subscribed successfully. 50,000 tokens allocated.'
+      message: 'Subscription fully synchronized to read-index.'
     });
 
   } catch (err) {
-    console.error('[Subscriptions] Subscribe error:', err);
+    console.error('[Subscriptions] Sync error:', err);
     res.status(500).json({ error: err.message });
   }
 });

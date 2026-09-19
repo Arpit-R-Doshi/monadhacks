@@ -63,6 +63,22 @@ export function getSigner() {
 }
 
 /**
+ * Get contract config and ABIs for the frontend
+ */
+export function getContractConfig() {
+  return {
+    addresses: {
+      SYN3RGYToken: process.env.SYN3RGY_TOKEN_ADDRESS,
+      PaymentManager: process.env.PAYMENT_MANAGER_ADDRESS,
+    },
+    abis: {
+      SYN3RGYToken: loadABI('SYN3RGYToken'),
+      PaymentManager: loadABI('PaymentManager'),
+    }
+  };
+}
+
+/**
  * Register model on-chain
  */
 export async function registerModelOnChain(modelId, name, description, ipfsCID, category, pricePerUse, subscriptionPrice, rateLimit) {
@@ -143,4 +159,36 @@ export async function claimFaucet(userAddress) {
   const receipt = await tx.wait();
   const balance = await getTokenBalance(userAddress);
   return { hash: receipt.hash, simulated: false, balance };
+}
+
+/**
+ * Check if a user has an active layer-2 subscription
+ */
+export async function hasActiveSubscription(userAddress, modelId) {
+  if (!contracts.payment) {
+    return false;
+  }
+  try {
+    return await contracts.payment.hasActiveSubscription(userAddress, modelId);
+  } catch (err) {
+    console.error('[Blockchain] hasActiveSubscription Error:', err.message);
+    return false;
+  }
+}
+
+/**
+ * Deduct tokens from an active subscription
+ */
+export async function deductFromSubscriptionOnChain(userAddress, modelId, tokens) {
+  if (!contracts.payment) {
+    return { hash: '0x' + 'sim'.repeat(21), simulated: true };
+  }
+  try {
+    const tx = await contracts.payment.deductFromSubscription(userAddress, modelId, tokens);
+    const receipt = await tx.wait();
+    return { hash: receipt.hash, simulated: false };
+  } catch (err) {
+    console.error('[Blockchain] deductFromSubscriptionOnChain Error:', err.message);
+    throw err;
+  }
 }

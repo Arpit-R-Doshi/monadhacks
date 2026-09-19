@@ -2,10 +2,10 @@ import { Router } from 'express';
 import { v4 as uuidv4 } from 'uuid';
 import { encrypt, decrypt } from '../services/encryption.js';
 import { uploadToIPFS } from '../services/ipfs.js';
-import { createPromptOnChain, submitResponseOnChain } from '../services/blockchain.js';
 import { runInference, healthCheck } from '../services/compute.js';
 import { processImageAndExtractText } from '../services/vision.js';
 import { getModelById, savePrompt, updatePromptResponse, getPromptsByUser, checkRateLimit, incrementModelUses, getOrCreateUser, updateUserBalance, getSubscription, updateSubscriptionTokens } from '../db/sqlite.js';
+import { createPromptOnChain, submitResponseOnChain, deductFromSubscriptionOnChain, hasActiveSubscription as hasActiveSubOnChain } from '../services/blockchain.js';
 
 const router = Router();
 
@@ -34,14 +34,16 @@ router.post('/', async (req, res) => {
 
     // 3. Check for active subscription
     const user = getOrCreateUser(userAddress);
-    const sub = getSubscription(userAddress, modelId);
     
-    if (!sub) {
-      return res.status(403).json({ error: 'Active subscription required to use this model.' });
-    } else {
-      if (sub.tokens_used >= sub.tokens_allocated) {
-        return res.status(402).json({ error: 'Subscription token limit reached for this month.' });
-      }
+    // Perform highly-secure read from Layer-2 Polygon RPC
+    const hasPolygonSub = await hasActiveSubOnChain(userAddress, modelId);
+    if (!hasPolygonSub) {
+       return res.status(403).json({ error: 'Active subscription required on Polygon Amoy to use this model.' });
+    }
+    
+    const sub = getSubscription(userAddress, modelId);
+    if (sub && sub.tokens_used >= sub.tokens_allocated) {
+       return res.status(402).json({ error: 'Subscription token limit reached for this month.' });
     }
 
     let finalPrompt = prompt;
@@ -88,8 +90,8 @@ router.post('/', async (req, res) => {
       status: 'processing',
     });
 
-    // 8. Run inference via compute node (Ollama)
-    const inferenceResult = await runInference(model.ollama_model, finalPrompt);
+    // 8. Run inference via compute node (Ollama or Remote Peer)
+    const inferenceResult = await runInference(model, finalPrompt, image);
 
     // 9. Encrypt response
     const encryptedResponse = encrypt(inferenceResult.response, model.encryption_key);
@@ -103,7 +105,14 @@ router.post('/', async (req, res) => {
 
     // 12. Deduct tokens
     const totalTokens = inferenceResult.inputTokens + inferenceResult.outputTokens;
-    updateSubscriptionTokens(sub.id, totalTokens);
+    
+    // Persist to Layer-2 Smart Contract
+    await deductFromSubscriptionOnChain(userAddress, modelId, totalTokens);
+    
+    // Persist to lightning-fast DB read index
+    if (sub) {
+      updateSubscriptionTokens(sub.id, totalTokens);
+    }
     incrementModelUses(modelId);
 
     // 13. Update prompt in DB

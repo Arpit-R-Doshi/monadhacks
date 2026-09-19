@@ -21,7 +21,22 @@ function App() {
   const [balance, setBalance] = useState(0);
   const [loading, setLoading] = useState(false);
   const [userRole, setUserRole] = useState(() => localStorage.getItem('syn3rgy_role') || null);
+  const [appConfig, setAppConfig] = useState(null);
   const { address, isConnected } = useAccount();
+
+  // Fetch app config
+  useEffect(() => {
+    const fetchConfig = async () => {
+      try {
+        const res = await fetch(`${API_URL}/api/config`);
+        const data = await res.json();
+        if (data.success) setAppConfig(data.config);
+      } catch (err) {
+        console.error('Failed to load API config:', err);
+      }
+    };
+    fetchConfig();
+  }, []);
 
   // Persist role to localStorage
   const handleSetRole = (role) => {
@@ -98,7 +113,7 @@ function App() {
     wallet, balance, loading, setLoading,
     refreshBalance, claimFaucet,
     userRole, setUserRole: handleSetRole,
-    API_URL,
+    API_URL, appConfig,
   };
 
   return (

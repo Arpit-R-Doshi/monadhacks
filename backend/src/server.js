@@ -24,6 +24,8 @@ import executionRoutes from './routes/execution.js';
 import walletRoutes from './routes/wallet.js';
 import historyRoutes from './routes/history.js';
 import subscriptionRoutes from './routes/subscriptions.js';
+import apiKeyRoutes from './routes/apikeys.js';
+import inferenceRoutes from './routes/inference.js';
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -47,6 +49,8 @@ app.use('/api/execute', executionRoutes);
 app.use('/api/wallet', walletRoutes);
 app.use('/api/history', historyRoutes);
 app.use('/api/subscriptions', subscriptionRoutes);
+app.use('/api/keys', apiKeyRoutes);
+app.use('/api/v1', inferenceRoutes);
 
 // Health check
 app.get('/api/health', async (req, res) => {
@@ -67,6 +71,15 @@ app.get('/api/health', async (req, res) => {
       ipfs,
       compute,
     },
+  });
+});
+
+// App Config for frontend Web3
+app.get('/api/config', async (req, res) => {
+  const { getContractConfig } = await import('./services/blockchain.js');
+  res.json({
+    success: true,
+    config: getContractConfig()
   });
 });
 

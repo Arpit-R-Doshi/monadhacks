@@ -73,9 +73,41 @@ export function initDB() {
       expires_at DATETIME,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
+
+    CREATE TABLE IF NOT EXISTS api_keys (
+      id TEXT PRIMARY KEY,
+      key_hash TEXT UNIQUE NOT NULL,
+      key_prefix TEXT NOT NULL,
+      user_address TEXT NOT NULL,
+      name TEXT DEFAULT 'Default',
+      is_active INTEGER DEFAULT 1,
+      total_requests INTEGER DEFAULT 0,
+      total_tokens_used INTEGER DEFAULT 0,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      last_used_at DATETIME
+    );
   `);
 
   console.log('[DB] SQLite initialized at', DB_PATH);
+
+  // Alter existing models table to add the new remote compute columns if they don't exist
+  try {
+    const columns = db.pragma('table_info(models)');
+    const hasComputeUrl = columns.some(c => c.name === 'compute_node_url');
+    if (!hasComputeUrl) {
+      db.exec(`
+        ALTER TABLE models ADD COLUMN compute_node_url TEXT;
+        ALTER TABLE models ADD COLUMN input_modality TEXT DEFAULT 'text';
+        ALTER TABLE models ADD COLUMN is_remote INTEGER DEFAULT 0;
+        ALTER TABLE models ADD COLUMN model_weights_cid TEXT;
+        ALTER TABLE models ADD COLUMN model_config_cid TEXT;
+      `);
+      console.log('[DB] Added remote compute columns to models table.');
+    }
+  } catch (err) {
+    console.error('[DB] Alter table check failed:', err.message);
+  }
+
   return db;
 }
 
@@ -86,10 +118,21 @@ export function getDB() {
 // Model operations
 export function saveModel(model) {
   const stmt = db.prepare(`
-    INSERT OR REPLACE INTO models (id, name, description, category, ipfs_cid, owner_address, ollama_model, price_per_use, subscription_price, rate_limit, encryption_key)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    INSERT OR REPLACE INTO models (
+      id, name, description, category, ipfs_cid, owner_address, ollama_model, price_per_use, subscription_price, rate_limit, encryption_key,
+      compute_node_url, input_modality, is_remote, model_weights_cid, model_config_cid
+    )
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `);
-  return stmt.run(model.id, model.name, model.description, model.category, model.ipfsCid, model.ownerAddress, model.ollamaModel, model.pricePerUse, model.subscriptionPrice, model.rateLimit, model.encryptionKey);
+  return stmt.run(
+    model.id, model.name, model.description, model.category, model.ipfsCid, model.ownerAddress, model.ollamaModel, model.pricePerUse, model.subscriptionPrice, model.rateLimit, model.encryptionKey,
+    model.computeNodeUrl || null, model.inputModality || 'text', model.isRemote ? 1 : 0, model.modelWeightsCid || null, model.modelConfigCid || null
+  );
+}
+
+export function deleteModel(id) {
+  // Soft delete by setting is_active = 0
+  return db.prepare('UPDATE models SET is_active = 0 WHERE id = ?').run(id);
 }
 
 export function getModels() {
@@ -213,3 +256,40 @@ export function getOwnerSubscriptionStats(ownerAddress) {
 export function updateSubscriptionTokens(id, tokensUsed) {
   db.prepare('UPDATE subscriptions SET tokens_used = tokens_used + ? WHERE id = ?').run(tokensUsed, id);
 }
+
+// API Key operations
+export function createApiKey({ id, keyHash, keyPrefix, userAddress, name }) {
+  const stmt = db.prepare(`
+    INSERT INTO api_keys (id, key_hash, key_prefix, user_address, name)
+    VALUES (?, ?, ?, ?, ?)
+  `);
+  return stmt.run(id, keyHash, keyPrefix, userAddress, name || 'Default');
+}
+
+export function getApiKeyByHash(keyHash) {
+  return db.prepare(`
+    SELECT * FROM api_keys WHERE key_hash = ? AND is_active = 1
+  `).get(keyHash);
+}
+
+export function getApiKeysByUser(userAddress) {
+  return db.prepare(`
+    SELECT id, key_prefix, name, is_active, total_requests, total_tokens_used, created_at, last_used_at
+    FROM api_keys WHERE user_address = ?
+    ORDER BY created_at DESC
+  `).all(userAddress);
+}
+
+export function revokeApiKey(keyId, userAddress) {
+  return db.prepare(`
+    UPDATE api_keys SET is_active = 0 WHERE id = ? AND user_address = ?
+  `).run(keyId, userAddress);
+}
+
+export function updateApiKeyUsage(keyId, tokensUsed) {
+  db.prepare(`
+    UPDATE api_keys SET total_requests = total_requests + 1, total_tokens_used = total_tokens_used + ?, last_used_at = CURRENT_TIMESTAMP
+    WHERE id = ?
+  `).run(tokensUsed, keyId);
+}
+
