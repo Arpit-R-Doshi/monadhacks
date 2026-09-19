@@ -5,6 +5,7 @@ import { getApiKeyByHash, updateApiKeyUsage, getModelById, getModels, getOrCreat
 import { runInference } from '../services/compute.js';
 import { encrypt } from '../services/encryption.js';
 import { uploadToIPFS } from '../services/ipfs.js';
+import { processImageAndExtractText } from '../services/vision.js';
 
 const router = Router();
 
@@ -19,7 +20,7 @@ function authenticateApiKey(req, res, next) {
   const authHeader = req.headers.authorization;
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
     return res.status(401).json({
-      error: { message: 'Missing or invalid Authorization header. Use: Bearer syn3_xxxxx', type: 'auth_error' }
+      error: { message: 'Missing or invalid Authorization header. Use: Bearer ecl_xxxxx', type: 'auth_error' }
     });
   }
 
@@ -97,28 +98,55 @@ router.post('/chat/completions', authenticateApiKey, async (req, res) => {
       });
     }
 
-    // Check user balance (pay-as-you-go: 1 SYN per request)
+    // Check user balance (pay-as-you-go: price_per_use ECL per request)
     const costPerRequest = modelRecord.price_per_use ?? 1;
     const user = getOrCreateUser(req.userAddress);
     if (user.balance < costPerRequest) {
       return res.status(402).json({
         error: {
-          message: `Insufficient SYN balance. You have ${user.balance} SYN, need ${costPerRequest} SYN per request. Top up via the dashboard faucet.`,
+          message: `Insufficient ECL balance. You have ${user.balance} ECL, need ${costPerRequest} ECL per request. Top up via the dashboard faucet.`,
           type: 'insufficient_funds'
         }
       });
     }
 
-    // Build prompt from messages (OpenAI format → single prompt)
-    const prompt = messages.map(m => {
-      if (m.role === 'system') return `System: ${m.content}`;
-      if (m.role === 'user') return `User: ${m.content}`;
-      if (m.role === 'assistant') return `Assistant: ${m.content}`;
-      return m.content;
+    // Check for attached image (multimodal input)
+    let attachedImage = req.body.image || req.body.image_url || null;
+
+    // Build prompt from messages (supporting OpenAI multimodal array content or string)
+    let prompt = messages.map(m => {
+      let contentStr = '';
+      if (Array.isArray(m.content)) {
+        for (const part of m.content) {
+          if (part.type === 'text') contentStr += part.text;
+          if (part.type === 'image_url') {
+            attachedImage = part.image_url?.url || part.image_url;
+          }
+        }
+      } else {
+        contentStr = m.content || '';
+      }
+      if (m.role === 'system') return `System: ${contentStr}`;
+      if (m.role === 'user') return `User: ${contentStr}`;
+      if (m.role === 'assistant') return `Assistant: ${contentStr}`;
+      return contentStr;
     }).join('\n\n');
 
-    // Run inference
-    const inferenceResult = await runInference(modelRecord.ollama_model, prompt);
+    // If an image is provided, extract vision/OCR context
+    if (attachedImage) {
+      try {
+        console.log('[API v1] Processing multimodal image layer with vision service...');
+        const extractedText = await processImageAndExtractText(attachedImage);
+        if (extractedText && extractedText.trim().length > 0) {
+          prompt = `[Attached Image OCR/Visual Content: "${extractedText}"]\n\n${prompt}`;
+        }
+      } catch (imgErr) {
+        console.warn('[API v1] Image OCR processing notice:', imgErr.message);
+      }
+    }
+
+    // Run inference (via Groq Cloud LPU or Ollama)
+    const inferenceResult = await runInference(modelRecord, prompt, attachedImage);
     const totalTokens = (inferenceResult.inputTokens || 0) + (inferenceResult.outputTokens || 0);
 
     // Deduct balance

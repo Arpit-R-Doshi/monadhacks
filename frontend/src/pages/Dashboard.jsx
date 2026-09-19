@@ -14,7 +14,7 @@ export default function Dashboard() {
   const [generatingKey, setGeneratingKey] = useState(false);
   const [justCreatedKey, setJustCreatedKey] = useState(null);
   const [snippetTab, setSnippetTab] = useState('curl');
-  const [selectedModel, setSelectedModel] = useState('gemma-2b-demo');
+  const [selectedModel, setSelectedModel] = useState('llama-3.3-70b');
   const [models, setModels] = useState([]);
   const [showBuyModal, setShowBuyModal] = useState(false);
   const [computeNodes, setComputeNodes] = useState([]);
@@ -34,7 +34,11 @@ export default function Dashboard() {
     try {
       const res = await fetch(`${API_URL}/api/models`);
       const data = await res.json();
-      setModels(data.models || []);
+      const list = data.models || [];
+      setModels(list);
+      if (list.length > 0) {
+        setSelectedModel(prev => list.some(m => m.id === prev) ? prev : list[0].id);
+      }
     } catch (err) { console.error(err); }
   };
 
@@ -124,8 +128,8 @@ export default function Dashboard() {
     } catch (err) { console.error('Compute nodes error:', err); }
   };
 
-  const apiKeyForSnippet = justCreatedKey || 'syn3_your_api_key_here';
-  const baseUrl = window.location.origin.replace(':5173', ':3001');
+  const apiKeyForSnippet = justCreatedKey || 'ecl_your_api_key_here';
+  const baseUrl = API_URL || 'http://localhost:3001';
 
   const snippets = {
     curl: `curl -X POST ${baseUrl}/api/v1/chat/completions \\
