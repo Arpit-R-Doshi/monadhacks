@@ -2,16 +2,13 @@
 pragma solidity ^0.8.20;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 /**
  * @title PaymentManager
- * @dev Handles pay-per-use and subscription payments for the ECLIPSE marketplace.
+ * @dev Handles pay-per-use and subscription payments using native Monad testnet tokens (MON).
  * Revenue split: 85% model owner, 10% compute node, 5% platform.
  */
 contract PaymentManager is Ownable {
-    IERC20 public synToken;
-
     // Revenue split percentages (basis points, 10000 = 100%)
     uint256 public constant MODEL_OWNER_SHARE = 8500;  // 85%
     uint256 public constant COMPUTE_NODE_SHARE = 1000;  // 10%
@@ -59,78 +56,68 @@ contract PaymentManager is Ownable {
     event NodeRewarded(address indexed node, uint256 amount);
     event RewardsClaimed(address indexed node, uint256 amount);
 
-    constructor(address _synToken, address _treasury, address initialOwner) Ownable(initialOwner) {
-        synToken = IERC20(_synToken);
+    constructor(address _treasury, address initialOwner) Ownable(initialOwner) {
         treasury = _treasury;
     }
 
     /**
-     * @dev Process a pay-per-use payment for model inference.
+     * @dev Process a pay-per-use payment for model inference using native MON.
      * @param _modelId The model being used
-     * @param _user The user paying
-     * @param _modelOwner The model owner receiving payment
-     * @param _computeNode The compute node that ran inference
-     * @param _amount Total payment amount in SYN tokens
+     * @param _modelOwner The model owner receiving 85%
+     * @param _computeNode The compute node that ran inference (10%)
      */
     function payPerUse(
         string calldata _modelId,
-        address _user,
         address _modelOwner,
-        address _computeNode,
-        uint256 _amount
-    ) external onlyOwner {
-        require(_amount > 0, "Amount must be > 0");
-        require(synToken.balanceOf(_user) >= _amount, "Insufficient balance");
+        address _computeNode
+    ) external payable {
+        require(msg.value > 0, "Amount must be > 0");
 
         // Calculate splits
-        uint256 ownerAmount = (_amount * MODEL_OWNER_SHARE) / 10000;
-        uint256 nodeAmount = (_amount * COMPUTE_NODE_SHARE) / 10000;
-        uint256 platformAmount = _amount - ownerAmount - nodeAmount;
+        uint256 ownerAmount = (msg.value * MODEL_OWNER_SHARE) / 10000;
+        uint256 nodeAmount = (msg.value * COMPUTE_NODE_SHARE) / 10000;
+        uint256 platformAmount = msg.value - ownerAmount - nodeAmount;
 
-        // Transfer from user
-        require(synToken.transferFrom(_user, _modelOwner, ownerAmount), "Owner transfer failed");
-        require(synToken.transferFrom(_user, address(this), nodeAmount + platformAmount), "Platform transfer failed");
+        // Send 85% to model owner in native MON
+        (bool sentOwner, ) = payable(_modelOwner).call{value: ownerAmount}("");
+        require(sentOwner, "Failed to send MON to model owner");
 
         // Track node rewards
         nodeRewards[_computeNode] += nodeAmount;
-
         totalRevenue += platformAmount;
 
         payments.push(PaymentRecord({
-            user: _user,
+            user: msg.sender,
             modelId: _modelId,
-            amount: _amount,
+            amount: msg.value,
             timestamp: block.timestamp,
             paymentType: "per-use"
         }));
 
-        emit PaymentProcessed(_user, _modelId, _amount, "per-use");
+        emit PaymentProcessed(msg.sender, _modelId, msg.value, "per-use");
         emit NodeRewarded(_computeNode, nodeAmount);
     }
 
     /**
-     * @dev Subscribe to a model with a monthly token quota.
+     * @dev Subscribe to a model with a monthly token quota using native MON.
      * @param _modelId The model to subscribe to
+     * @param _modelOwner The model owner address receiving 85%
      * @param _quota Token quota for the subscription period
-     * @param _price Price for the subscription in SYN tokens
      * @param _duration Duration in seconds (e.g., 30 days = 2592000)
      */
     function subscribe(
         string calldata _modelId,
         address _modelOwner,
         uint256 _quota,
-        uint256 _price,
         uint256 _duration
-    ) external {
-        require(_price > 0, "Price must be > 0");
-        require(synToken.balanceOf(msg.sender) >= _price, "Insufficient balance");
+    ) external payable {
+        require(msg.value > 0, "Price must be > 0");
 
-        // Transfer subscription payment
-        uint256 ownerAmount = (_price * MODEL_OWNER_SHARE) / 10000;
-        uint256 platformAmount = _price - ownerAmount;
+        uint256 ownerAmount = (msg.value * MODEL_OWNER_SHARE) / 10000;
+        uint256 platformAmount = msg.value - ownerAmount;
 
-        require(synToken.transferFrom(msg.sender, _modelOwner, ownerAmount), "Owner transfer failed");
-        require(synToken.transferFrom(msg.sender, address(this), platformAmount), "Platform transfer failed");
+        (bool sentOwner, ) = payable(_modelOwner).call{value: ownerAmount}("");
+        require(sentOwner, "Failed to send MON to model owner");
 
         totalRevenue += platformAmount;
 
@@ -145,20 +132,17 @@ contract PaymentManager is Ownable {
         payments.push(PaymentRecord({
             user: msg.sender,
             modelId: _modelId,
-            amount: _price,
+            amount: msg.value,
             timestamp: block.timestamp,
             paymentType: "subscription"
         }));
 
         emit SubscriptionCreated(msg.sender, _modelId, _quota, block.timestamp + _duration);
-        emit PaymentProcessed(msg.sender, _modelId, _price, "subscription");
+        emit PaymentProcessed(msg.sender, _modelId, msg.value, "subscription");
     }
 
     /**
      * @dev Deduct tokens from subscription quota.
-     * @param _user User address
-     * @param _modelId Model ID
-     * @param _tokensUsed Tokens consumed in this request
      */
     function deductFromSubscription(
         address _user,
@@ -177,26 +161,28 @@ contract PaymentManager is Ownable {
     }
 
     /**
-     * @dev Compute node claims accumulated rewards.
+     * @dev Compute node claims accumulated rewards in native MON.
      */
     function claimRewards() external {
         uint256 reward = nodeRewards[msg.sender];
         require(reward > 0, "No rewards to claim");
         nodeRewards[msg.sender] = 0;
-        require(synToken.transfer(msg.sender, reward), "Reward transfer failed");
+
+        (bool sent, ) = payable(msg.sender).call{value: reward}("");
+        require(sent, "Reward transfer failed");
+
         emit RewardsClaimed(msg.sender, reward);
     }
 
     /**
-     * @dev Withdraw platform revenue to treasury. Only owner.
+     * @dev Withdraw platform revenue to treasury in native MON. Only owner.
      */
     function withdrawPlatformRevenue() external onlyOwner {
-        uint256 balance = synToken.balanceOf(address(this));
-        uint256 pendingRewards = 0;
-        // This is a simplified version - in production, track pending rewards separately
-        require(balance > pendingRewards, "No revenue to withdraw");
-        uint256 withdrawable = balance - pendingRewards;
-        require(synToken.transfer(treasury, withdrawable), "Withdrawal failed");
+        uint256 balance = address(this).balance;
+        require(balance > 0, "No revenue to withdraw");
+
+        (bool sent, ) = payable(treasury).call{value: balance}("");
+        require(sent, "Withdrawal failed");
     }
 
     /**
@@ -229,4 +215,6 @@ contract PaymentManager is Ownable {
     function setTreasury(address _treasury) external onlyOwner {
         treasury = _treasury;
     }
+
+    receive() external payable {}
 }

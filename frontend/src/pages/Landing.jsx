@@ -19,7 +19,7 @@ export default function Landing() {
   const steps = [
     { num: '01', title: 'Upload & Encrypt', desc: 'Encrypt your model with AES-256 and deploy to IPFS. Register ownership on Monad.', color: '#7c3aed' },
     { num: '02', title: 'Discover & Select', desc: 'Browse the marketplace. Compare pricing, reviews, and capabilities.', color: '#3b82f6' },
-    { num: '03', title: 'Pay & Execute', desc: 'ECL tokens deducted via smart contract. Prompt encrypted and routed to compute.', color: '#10b981' },
+    { num: '03', title: 'Pay & Execute', desc: 'MON tokens deducted via smart contract. Prompt encrypted and routed to compute.', color: '#10b981' },
     { num: '04', title: 'Receive & Verify', desc: 'Inference result decrypted and returned. Full transaction proof on blockchain.', color: '#f59e0b' },
   ];
 

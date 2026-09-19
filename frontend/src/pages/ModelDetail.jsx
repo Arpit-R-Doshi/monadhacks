@@ -110,22 +110,21 @@ export default function ModelDetail() {
 
       const price = model.subscription_price.toString();
       const priceWei = parseEther(price);
-      const tokenAbi = parseAbi(appConfig.abis.EclipseToken);
-      const paymentAbi = parseAbi(appConfig.abis.PaymentManager);
+      const paymentAbi = Array.isArray(appConfig.abis?.PaymentManager) && typeof appConfig.abis.PaymentManager[0] === 'object'
+        ? appConfig.abis.PaymentManager
+        : parseAbi([
+            'function subscribe(string calldata _modelId, address _modelOwner, uint256 _quota, uint256 _duration) external payable'
+          ]);
+
       const gasOverrides = {
         maxPriorityFeePerGas: parseGwei('40'),
         maxFeePerGas: parseGwei('50'),
       };
-      
-      const tokenAddress = appConfig.addresses.EclipseToken;
 
-      // Pre-flight: check on-chain ECL balance
-      toast.loading('Checking on-chain balance...', { id: 'sub-tx' });
-      const onChainBal = await publicClient.readContract({
-        address: tokenAddress,
-        abi: tokenAbi,
-        functionName: 'balanceOf',
-        args: [wallet],
+      // Pre-flight: check on-chain native MON balance
+      toast.loading('Checking Monad testnet balance...', { id: 'sub-tx' });
+      const onChainBal = await publicClient.getBalance({
+        address: wallet,
       });
       
       if (onChainBal < priceWei) {
@@ -133,48 +132,21 @@ export default function ModelDetail() {
         setSubscribing(false);
         return;
       }
-      
-      // Step 1: Approve ECL tokens for PaymentManager
-      toast.loading('Step 1/3: Approve ECL tokens in MetaMask...', { id: 'sub-tx' });
-      const approveHash = await walletClient.writeContract({
-        address: tokenAddress,
-        abi: tokenAbi,
-        functionName: 'approve',
-        args: [appConfig.addresses.PaymentManager, priceWei],
-        chain: monadTestnet,
-        account: wallet,
-        ...gasOverrides,
-      });
-      
-      toast.loading('Step 1/3: Waiting for approval confirmation...', { id: 'sub-tx' });
-      const approveReceipt = await publicClient.waitForTransactionReceipt({ 
-        hash: approveHash,
-        confirmations: 1,
-        timeout: 120_000,
-      });
-      
-      if (approveReceipt.status === 'reverted') {
-        toast.error('Approval transaction reverted on-chain.', { id: 'sub-tx' });
-        setSubscribing(false);
-        return;
-      }
-      
-      // Buffer for RPC load-balancers
-      await new Promise(r => setTimeout(r, 2000));
-      
-      // Step 2: Subscribe on PaymentManager
-      toast.loading('Step 2/3: Confirm subscription in MetaMask...', { id: 'sub-tx' });
+
+      // Single step: Subscribe directly on PaymentManager using native MON (msg.value)
+      toast.loading('Confirm subscription in MetaMask...', { id: 'sub-tx' });
       const subHash = await walletClient.writeContract({
         address: appConfig.addresses.PaymentManager,
         abi: paymentAbi,
         functionName: 'subscribe',
-        args: [id, model.owner_address, 50000n, priceWei, 2592000n],
+        args: [id, model.owner_address, 50000n, 2592000n],
+        value: priceWei,
         chain: monadTestnet,
         account: wallet,
         ...gasOverrides,
       });
       
-      toast.loading('Step 2/3: Waiting for subscription confirmation...', { id: 'sub-tx' });
+      toast.loading('Waiting for subscription confirmation on Monad...', { id: 'sub-tx' });
       const subReceipt = await publicClient.waitForTransactionReceipt({ 
         hash: subHash,
         confirmations: 1,
@@ -187,8 +159,8 @@ export default function ModelDetail() {
         return;
       }
 
-      // Step 3: Synchronize SQLite read-index
-      toast.loading('Step 3/3: Syncing local index...', { id: 'sub-tx' });
+      // Synchronize SQLite read-index
+      toast.loading('Syncing local index...', { id: 'sub-tx' });
       const syncRes = await fetch(`${API_URL}/api/subscriptions/sync`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -197,7 +169,7 @@ export default function ModelDetail() {
       const data = await syncRes.json();
       
       if (data.success) {
-        toast.success('🎉 Subscribed on-chain successfully!', { id: 'sub-tx' });
+        toast.success('🎉 Subscribed on Monad testnet successfully!', { id: 'sub-tx' });
         setSubscribed(true);
         refreshBalance();
         checkSubscription();

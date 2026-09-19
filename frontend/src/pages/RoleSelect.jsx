@@ -69,7 +69,7 @@ export default function RoleSelect() {
             <p>Register, manage, and monetize your AI models on the blockchain-backed marketplace.</p>
             <ul className="role-features">
               <li>🚀 Upload & register models</li>
-              <li>💰 Set pricing & earn ECL</li>
+              <li>💰 Set pricing & earn MON</li>
               <li>📈 Track model performance</li>
               <li>🔐 Manage encryption keys</li>
             </ul>

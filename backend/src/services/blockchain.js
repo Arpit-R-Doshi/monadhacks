@@ -35,14 +35,10 @@ export function initBlockchain() {
   }
 
   // Initialize contracts if addresses are set
-  const tokenAddr = process.env.ECLIPSE_TOKEN_ADDRESS || process.env.SYN3RGY_TOKEN_ADDRESS;
   const registryAddr = process.env.MODEL_REGISTRY_ADDRESS;
   const paymentAddr = process.env.PAYMENT_MANAGER_ADDRESS;
   const promptAddr = process.env.PROMPT_EXECUTION_ADDRESS;
 
-  if (tokenAddr) {
-    contracts.token = new ethers.Contract(tokenAddr, loadABI('EclipseToken'), signer || provider);
-  }
   if (registryAddr) {
     contracts.registry = new ethers.Contract(registryAddr, loadABI('ModelRegistry'), signer || provider);
   }
@@ -80,19 +76,16 @@ export function getContractConfig() {
     network: {
       name: 'Monad Testnet',
       chainId: 10143,
+      currency: 'MON',
       rpcUrl: process.env.MONAD_TESTNET_RPC || 'https://testnet-rpc.monad.xyz/',
       explorerUrl: 'https://testnet.monadexplorer.com',
     },
     addresses: {
-      EclipseToken: process.env.ECLIPSE_TOKEN_ADDRESS || '',
-      SYN3RGYToken: process.env.ECLIPSE_TOKEN_ADDRESS || '',
       ModelRegistry: process.env.MODEL_REGISTRY_ADDRESS || '',
       PaymentManager: process.env.PAYMENT_MANAGER_ADDRESS || '',
       PromptExecution: process.env.PROMPT_EXECUTION_ADDRESS || '',
     },
     abis: {
-      EclipseToken: loadABI('EclipseToken'),
-      SYN3RGYToken: loadABI('EclipseToken'),
       PaymentManager: loadABI('PaymentManager'),
       ModelRegistry: loadABI('ModelRegistry'),
       PromptExecution: loadABI('PromptExecution'),
@@ -115,27 +108,24 @@ export async function getMonadNativeBalance(address) {
 }
 
 /**
- * Get on-chain token balance for an address
+ * Get on-chain Monad testnet balance for an address
  */
 export async function getTokenBalance(address) {
-  if (!contracts.token) return '0';
-  try {
-    const bal = await contracts.token.balanceOf(address);
-    return ethers.formatEther(bal);
-  } catch (err) {
-    return '0';
-  }
+  return getMonadNativeBalance(address);
 }
 
 /**
- * Claim testnet faucet tokens
+ * Claim testnet faucet tokens in native MON
  */
 export async function claimFaucet(address) {
-  if (!contracts.token || !signer) {
+  if (!signer) {
     return { hash: '0x' + 'monadfaucet'.padEnd(64, '0'), simulated: true };
   }
   try {
-    const tx = await contracts.token.claimFaucet();
+    const tx = await signer.sendTransaction({
+      to: address,
+      value: ethers.parseEther('1.0'),
+    });
     const receipt = await tx.wait();
     return { hash: receipt.hash, simulated: false };
   } catch (err) {

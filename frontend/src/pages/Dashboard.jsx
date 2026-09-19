@@ -2,7 +2,7 @@ import { useState, useEffect, useContext } from 'react';
 import { motion } from 'framer-motion';
 import toast from 'react-hot-toast';
 import { AppContext } from '../App.jsx';
-import BuyECLModal from '../components/BuyECLModal.jsx';
+import FaucetModal from '../components/FaucetModal.jsx';
 
 export default function Dashboard() {
   const { wallet, balance, API_URL } = useContext(AppContext);
@@ -672,7 +672,7 @@ console.log("Remaining balance:", data.eclipse.remaining_balance, "MON");`,
         )}
       </motion.div>
 
-      <BuyECLModal isOpen={showBuyModal} onClose={() => setShowBuyModal(false)} />
+      <FaucetModal isOpen={showBuyModal} onClose={() => setShowBuyModal(false)} />
     </div>
   );
 }

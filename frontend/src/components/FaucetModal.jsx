@@ -2,8 +2,8 @@ import { useState, useContext } from 'react';
 import toast from 'react-hot-toast';
 import { AppContext } from '../App.jsx';
 
-export default function BuyECLModal({ isOpen, onClose }) {
-  const { wallet, balance, refreshBalance, claimFaucet, API_URL } = useContext(AppContext);
+export default function FaucetModal({ isOpen, onClose }) {
+  const { wallet, balance, refreshBalance, API_URL } = useContext(AppContext);
   const [claiming, setClaiming] = useState(false);
 
   if (!isOpen) return null;
@@ -23,7 +23,7 @@ export default function BuyECLModal({ isOpen, onClose }) {
       });
       const data = await res.json();
       if (data.success) {
-        toast.success(`Claimed ${data.credited || 10} MON test tokens!`);
+        toast.success(`Claimed ${data.credited || 10} MON testnet tokens!`);
         refreshBalance();
         onClose();
       } else {

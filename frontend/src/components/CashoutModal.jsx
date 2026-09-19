@@ -184,7 +184,7 @@ export default function CashoutModal({ isOpen, onClose, onSuccess }) {
             background: 'rgba(52,211,153,0.1)', textAlign: 'center',
             fontSize: '0.88rem', fontWeight: 600, color: '#34d399',
           }}>
-            {eclAmount} ECL → {selectedCurrency.symbol}{localAmount.toLocaleString()} {selectedCurrency.code}
+            {eclAmount} MON → {selectedCurrency.symbol}{localAmount.toLocaleString()} {selectedCurrency.code}
           </div>
         )}
 
@@ -233,7 +233,7 @@ export default function CashoutModal({ isOpen, onClose, onSuccess }) {
           onClick={handleCashout}
           disabled={processing || !eclAmount || Number(eclAmount) <= 0}
         >
-          {processing ? 'Processing...' : `Withdraw ${eclAmount || 0} ECL`}
+          {processing ? 'Processing...' : `Withdraw ${eclAmount || 0} MON`}
         </button>
 
         <p style={{ fontSize: '0.72rem', color: 'var(--text-muted)', textAlign: 'center', marginTop: '0.75rem' }}>
@@ -253,7 +253,7 @@ export default function CashoutModal({ isOpen, onClose, onSuccess }) {
                   fontSize: '0.8rem',
                 }}>
                   <div>
-                    <div style={{ fontWeight: 600 }}>{w.amount} ECL → {w.local_amount} {w.currency}</div>
+                    <div style={{ fontWeight: 600 }}>{w.amount} MON → {w.local_amount} {w.currency}</div>
                     <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>
                       {w.method.replace('_', ' ')} • {new Date(w.created_at).toLocaleDateString()}
                     </div>

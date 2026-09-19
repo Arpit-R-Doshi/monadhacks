@@ -39,7 +39,6 @@ MONAD_TESTNET_RPC=https://testnet-rpc.monad.xyz/
 MONAD_CHAIN_ID=10143
 
 # Contract Addresses (filled after deployment)
-ECLIPSE_TOKEN_ADDRESS=0x...
 MODEL_REGISTRY_ADDRESS=0x...
 PAYMENT_MANAGER_ADDRESS=0x...
 PROMPT_EXECUTION_ADDRESS=0x...
@@ -81,9 +80,8 @@ forge script script/Deploy.s.sol --rpc-url https://testnet-rpc.monad.xyz/ --broa
 
 | Contract | Purpose |
 |----------|---------|
-| **EclipseToken** | ERC-20 platform credit token (`ECL`) with testnet faucet |
 | **ModelRegistry** | On-chain model metadata registry |
-| **PaymentManager** | Pay-per-use and subscription payments |
+| **PaymentManager** | Native Monad testnet token (`MON`) pay-per-use & subscription payments |
 | **PromptExecution** | Prompt lifecycle and verification tracking |
 
 ## 📜 License
