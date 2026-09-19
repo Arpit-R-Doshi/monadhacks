@@ -2,6 +2,38 @@ import axios from 'axios';
 
 function getOllamaUrl() { return process.env.OLLAMA_URL || 'http://localhost:11434'; }
 
+// ===================== COMPUTE NODE REGISTRY =====================
+export const COMPUTE_NODES = [
+  {
+    id: 'node-alpha',
+    name: 'Alpha Node',
+    location: 'Lab Machine 1',
+    url: process.env.OLLAMA_URL || 'http://10.103.143.101:11434',
+    specs: 'Intel i7 / 16GB RAM / RTX 3060',
+    icon: '🖥️',
+  },
+  {
+    id: 'node-beta',
+    name: 'Beta Node',
+    location: 'Lab Machine 2',
+    url: process.env.OLLAMA_URL_2 || 'http://10.103.143.102:11434',
+    specs: 'AMD Ryzen 9 / 32GB RAM / RTX 4070',
+    icon: '⚡',
+  },
+  {
+    id: 'node-gamma',
+    name: 'Gamma Node',
+    location: 'Lab Machine 3',
+    url: process.env.OLLAMA_URL_3 || 'http://10.103.143.103:11434',
+    specs: 'Apple M2 Pro / 16GB RAM',
+    icon: '🍎',
+  },
+];
+
+export function getNodeById(nodeId) {
+  return COMPUTE_NODES.find(n => n.id === nodeId) || COMPUTE_NODES[0];
+}
+
 // Available models mapping
 const MODEL_MAP = {
   'gemma': 'gemma:2b',
@@ -12,19 +44,33 @@ const MODEL_MAP = {
 };
 
 /**
- * Check if Ollama is running and accessible
+ * Check if a specific Ollama node is running
  */
-export async function healthCheck() {
+export async function healthCheck(nodeUrl) {
+  const url = nodeUrl || getOllamaUrl();
   try {
-    const res = await axios.get(`${getOllamaUrl()}/api/tags`, { timeout: 5000 });
+    const res = await axios.get(`${url}/api/tags`, { timeout: 5000 });
     return {
       healthy: true,
       models: res.data.models?.map(m => m.name) || [],
-      url: getOllamaUrl(),
+      url,
     };
   } catch (err) {
-    return { healthy: false, error: err.message, url: getOllamaUrl() };
+    return { healthy: false, error: err.message, url };
   }
+}
+
+/**
+ * Check health of all compute nodes
+ */
+export async function allNodesHealth() {
+  const results = await Promise.all(
+    COMPUTE_NODES.map(async (node) => {
+      const health = await healthCheck(node.url);
+      return { ...node, ...health };
+    })
+  );
+  return results;
 }
 
 /**
@@ -34,8 +80,9 @@ export async function healthCheck() {
  * @param {string} [imageBase64=null] - Optional base64 image data for multimodal processing
  * @returns {Promise<{response: string, inputTokens: number, outputTokens: number, duration: number}>}
  */
-export async function runInference(model, prompt, imageBase64 = null) {
+export async function runInference(model, prompt, imageBase64 = null, nodeUrl = null) {
   const modelName = typeof model === 'string' ? model : (model.ollama_model || model.name);
+  const targetUrl = nodeUrl || getOllamaUrl();
   const startTime = Date.now();
 
   // Handle Remote Peer Compute Protocol
@@ -71,11 +118,12 @@ export async function runInference(model, prompt, imageBase64 = null) {
     }
   }
 
-  // Handle Local Ollama
+  // Handle Local Ollama — route to specified node
   const ollamaModel = MODEL_MAP[modelName] || modelName;
 
   try {
-    const res = await axios.post(`${getOllamaUrl()}/api/generate`, {
+    console.log(`[Compute] Routing to node: ${targetUrl}`);
+    const res = await axios.post(`${targetUrl}/api/generate`, {
       model: ollamaModel,
       prompt: prompt,
       stream: false,

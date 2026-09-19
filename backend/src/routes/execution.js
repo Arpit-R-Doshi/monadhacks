@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { v4 as uuidv4 } from 'uuid';
 import { encrypt, decrypt } from '../services/encryption.js';
 import { uploadToIPFS } from '../services/ipfs.js';
-import { runInference, healthCheck } from '../services/compute.js';
+import { runInference, healthCheck, COMPUTE_NODES, getNodeById, allNodesHealth } from '../services/compute.js';
 import { processImageAndExtractText } from '../services/vision.js';
 import { getModelById, savePrompt, updatePromptResponse, getPromptsByUser, checkRateLimit, incrementModelUses, getOrCreateUser, updateUserBalance, getSubscription, updateSubscriptionTokens } from '../db/sqlite.js';
 import { createPromptOnChain, submitResponseOnChain, deductFromSubscriptionOnChain, hasActiveSubscription as hasActiveSubOnChain } from '../services/blockchain.js';
@@ -15,7 +15,7 @@ const router = Router();
  */
 router.post('/', async (req, res) => {
   try {
-    const { modelId, prompt, userAddress, image, sessionId } = req.body;
+    const { modelId, prompt, userAddress, image, sessionId, nodeId } = req.body;
 
     if (!modelId || !prompt || !userAddress) {
       return res.status(400).json({ error: 'Missing required fields: modelId, prompt, userAddress' });
@@ -103,7 +103,9 @@ router.post('/', async (req, res) => {
     });
 
     // 8. Run inference via compute node (Ollama or Remote Peer)
-    const inferenceResult = await runInference(model, finalPrompt, image);
+    const selectedNode = getNodeById(nodeId);
+    const inferenceResult = await runInference(model, finalPrompt, image, selectedNode.url);
+    console.log(`[Execution] Inference completed on ${selectedNode.name} (${selectedNode.id})`);
 
     // 9. Encrypt response
     const encryptedResponse = encrypt(inferenceResult.response, model.encryption_key);
@@ -187,6 +189,32 @@ router.get('/history/:address', (req, res) => {
 router.get('/health', async (req, res) => {
   const health = await healthCheck();
   res.json(health);
+});
+
+/**
+ * GET /api/execute/nodes
+ * List all available compute nodes
+ */
+router.get('/nodes', (req, res) => {
+  res.json({
+    success: true,
+    nodes: COMPUTE_NODES.map(n => ({
+      id: n.id,
+      name: n.name,
+      location: n.location,
+      specs: n.specs,
+      icon: n.icon,
+    })),
+  });
+});
+
+/**
+ * GET /api/execute/nodes/health
+ * Check health of all compute nodes
+ */
+router.get('/nodes/health', async (req, res) => {
+  const nodes = await allNodesHealth();
+  res.json({ success: true, nodes });
 });
 
 export default router;

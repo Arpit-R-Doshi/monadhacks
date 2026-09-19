@@ -24,12 +24,17 @@ export default function ModelDetail() {
   const [subscribed, setSubscribed] = useState(false);
   const [subDetails, setSubDetails] = useState(null);
   const [subscribing, setSubscribing] = useState(false);
+
+  // Compute node state
+  const [computeNodes, setComputeNodes] = useState([]);
+  const [selectedNode, setSelectedNode] = useState('node-alpha');
   
   const messagesEndRef = useRef(null);
   const fileInputRef = useRef(null);
 
   useEffect(() => {
     fetchModel();
+    fetchNodes();
     setMessages([]);  // clear on model switch
     setHistoryLoaded(false);
     setSessionId(crypto.randomUUID()); // new session for each model
@@ -54,6 +59,16 @@ export default function ModelDetail() {
       setModel(data.model);
     } catch (err) {
       console.error('Failed to fetch model:', err);
+    }
+  };
+
+  const fetchNodes = async () => {
+    try {
+      const res = await fetch(`${API_URL}/api/execute/nodes`);
+      const data = await res.json();
+      if (data.success) setComputeNodes(data.nodes);
+    } catch (err) {
+      console.error('Failed to fetch nodes:', err);
     }
   };
 
@@ -227,6 +242,7 @@ export default function ModelDetail() {
           userAddress: wallet,
           image: payloadImage,
           sessionId: sessionId,
+          nodeId: selectedNode,
         }),
       });
 
@@ -387,6 +403,36 @@ export default function ModelDetail() {
             {wallet && <span className="balance-badge">💎 {balance.toFixed(1)} ECL</span>}
           </div>
         </div>
+
+        {/* Compute Node Selector */}
+        {computeNodes.length > 0 && (
+          <div style={{
+            display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap',
+            padding: '0.6rem 0', borderBottom: '1px solid rgba(255,255,255,0.06)',
+            marginBottom: '0.5rem',
+          }}>
+            <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 600 }}>
+              ⚙️ Compute Node:
+            </span>
+            {computeNodes.map(node => (
+              <button
+                key={node.id}
+                onClick={() => setSelectedNode(node.id)}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: '0.35rem',
+                  padding: '0.3rem 0.7rem', borderRadius: '8px', cursor: 'pointer',
+                  fontSize: '0.75rem', fontWeight: 600, transition: 'all 0.2s ease',
+                  background: selectedNode === node.id ? 'rgba(124,58,237,0.2)' : 'rgba(255,255,255,0.04)',
+                  color: selectedNode === node.id ? '#a78bfa' : 'var(--text-secondary)',
+                  border: selectedNode === node.id ? '1px solid rgba(124,58,237,0.4)' : '1px solid rgba(255,255,255,0.06)',
+                }}
+              >
+                <span>{node.icon}</span>
+                <span>{node.name}</span>
+              </button>
+            ))}
+          </div>
+        )}
 
         <div className="prompt-messages">
           {messages.length === 0 && historyLoaded && (
