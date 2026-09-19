@@ -47,7 +47,7 @@ export default function ModelDetail() {
       loadHistory();
       checkSubscription();
     }
-  }, [wallet, id]);
+  }, [wallet, id, model]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -58,6 +58,11 @@ export default function ModelDetail() {
       const res = await fetch(`${API_URL}/api/models/${id}`);
       const data = await res.json();
       setModel(data.model);
+      if (data.model && wallet) {
+        if (data.model.owner_address?.toLowerCase() === wallet.toLowerCase() || Number(data.model.subscription_price) === 0) {
+          setSubscribed(true);
+        }
+      }
     } catch (err) {
       console.error('Failed to fetch model:', err);
     }
@@ -74,11 +79,17 @@ export default function ModelDetail() {
   };
 
   const checkSubscription = async () => {
+    // Model owners bypass subscription paywall on their own models
+    if (model && wallet && model.owner_address?.toLowerCase() === wallet.toLowerCase()) {
+      setSubscribed(true);
+      return;
+    }
     // Free models: skip subscription paywall entirely
     if (model && Number(model.subscription_price) === 0) {
       setSubscribed(true);
       return;
     }
+    if (!wallet || !id) return;
     try {
       const res = await fetch(`${API_URL}/api/subscriptions/check/${wallet}/${id}`);
       const data = await res.json();

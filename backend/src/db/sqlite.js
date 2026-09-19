@@ -283,24 +283,27 @@ export function getPromptsByUser(userAddress) {
 
 // User operations
 export function getOrCreateUser(address) {
-  let user = db.prepare('SELECT * FROM users WHERE address = ?').get(address);
+  const addr = (address || '').toLowerCase();
+  let user = db.prepare('SELECT * FROM users WHERE LOWER(address) = ?').get(addr);
   if (!user) {
-    db.prepare('INSERT INTO users (address, balance) VALUES (?, 0)').run(address);
-    user = db.prepare('SELECT * FROM users WHERE address = ?').get(address);
+    db.prepare('INSERT INTO users (address, balance) VALUES (?, 0)').run(addr);
+    user = db.prepare('SELECT * FROM users WHERE LOWER(address) = ?').get(addr);
   }
   return user;
 }
 
 export function updateUserBalance(address, amount) {
-  db.prepare('UPDATE users SET balance = balance + ?, total_spent = total_spent + ? WHERE address = ?').run(amount, amount < 0 ? Math.abs(amount) : 0, address);
+  const addr = (address || '').toLowerCase();
+  db.prepare('UPDATE users SET balance = balance + ?, total_spent = total_spent + ? WHERE LOWER(address) = ?').run(amount, amount < 0 ? Math.abs(amount) : 0, addr);
 }
 
 // Rate limiting
 export function checkRateLimit(userAddress, modelId, limit) {
-  const row = db.prepare('SELECT * FROM rate_limits WHERE user_address = ? AND model_id = ?').get(userAddress, modelId);
+  const addr = (userAddress || '').toLowerCase();
+  const row = db.prepare('SELECT * FROM rate_limits WHERE LOWER(user_address) = ? AND model_id = ?').get(addr, modelId);
 
   if (!row) {
-    db.prepare('INSERT INTO rate_limits (user_address, model_id, request_count) VALUES (?, ?, 1)').run(userAddress, modelId);
+    db.prepare('INSERT INTO rate_limits (user_address, model_id, request_count) VALUES (?, ?, 1)').run(addr, modelId);
     return true;
   }
 
@@ -309,13 +312,13 @@ export function checkRateLimit(userAddress, modelId, limit) {
   const diffMinutes = (now - windowStart) / 60000;
 
   if (diffMinutes >= 1) {
-    db.prepare('UPDATE rate_limits SET request_count = 1, window_start = CURRENT_TIMESTAMP WHERE user_address = ? AND model_id = ?').run(userAddress, modelId);
+    db.prepare('UPDATE rate_limits SET request_count = 1, window_start = CURRENT_TIMESTAMP WHERE LOWER(user_address) = ? AND model_id = ?').run(addr, modelId);
     return true;
   }
 
   if (row.request_count >= limit) return false;
 
-  db.prepare('UPDATE rate_limits SET request_count = request_count + 1 WHERE user_address = ? AND model_id = ?').run(userAddress, modelId);
+  db.prepare('UPDATE rate_limits SET request_count = request_count + 1 WHERE LOWER(user_address) = ? AND model_id = ?').run(addr, modelId);
   return true;
 }
 
@@ -329,15 +332,16 @@ export function createSubscription(sub) {
     INSERT INTO subscriptions (id, user_address, model_id, tokens_allocated, tx_hash, expires_at)
     VALUES (?, ?, ?, ?, ?, datetime('now', '+30 days'))
   `);
-  return stmt.run(sub.id, sub.userAddress.toLowerCase(), sub.modelId, sub.tokensAllocated, sub.txHash || '');
+  return stmt.run(sub.id, (sub.userAddress || '').toLowerCase(), sub.modelId, sub.tokensAllocated, sub.txHash || '');
 }
 
 export function getSubscription(userAddress, modelId) {
+  const addr = (userAddress || '').toLowerCase();
   return db.prepare(`
     SELECT * FROM subscriptions 
-    WHERE user_address = ? AND model_id = ? AND status = 'active' AND expires_at > datetime('now')
+    WHERE LOWER(user_address) = ? AND model_id = ? AND status = 'active' AND expires_at > datetime('now')
     ORDER BY created_at DESC LIMIT 1
-  `).get(userAddress, modelId);
+  `).get(addr, modelId);
 }
 
 export function getUserSubscriptions(userAddress) {
