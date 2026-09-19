@@ -19,21 +19,24 @@ router.get('/:userAddress', (req, res) => {
       LEFT JOIN models m ON p.model_id = m.id
       WHERE p.user_address = ?
       ORDER BY p.created_at DESC
-      LIMIT 100
+      LIMIT 200
     `).all(userAddress);
 
-    // Group prompts by model for organized history view
+    // Group prompts by session_id (or by model_id for legacy prompts without session)
     const grouped = {};
     for (const p of prompts) {
-      if (!grouped[p.model_id]) {
-        grouped[p.model_id] = {
+      const key = p.session_id || `legacy_${p.model_id}`;
+      if (!grouped[key]) {
+        grouped[key] = {
+          sessionId: key,
           modelId: p.model_id,
           modelName: p.model_name || p.model_id,
           modelCategory: p.model_category,
+          startedAt: p.created_at,
           messages: [],
         };
       }
-      grouped[p.model_id].messages.push({
+      grouped[key].messages.push({
         id: p.id,
         userPrompt: p.prompt_text,
         assistantResponse: p.response_text,
@@ -49,11 +52,22 @@ router.get('/:userAddress', (req, res) => {
       });
     }
 
+    // Sort conversations by most recent message
+    const conversations = Object.values(grouped).sort((a, b) => {
+      const aTime = new Date(a.messages[0]?.createdAt || 0);
+      const bTime = new Date(b.messages[0]?.createdAt || 0);
+      return bTime - aTime;
+    });
+
+    // Reverse messages within each conversation to chronological order
+    for (const conv of conversations) {
+      conv.messages.reverse();
+    }
+
     res.json({
       success: true,
       total: prompts.length,
-      conversations: Object.values(grouped),
-      raw: prompts,
+      conversations,
     });
   } catch (err) {
     res.status(500).json({ error: err.message });

@@ -17,7 +17,7 @@ import {
 } from '@tanstack/react-query';
 
 const config = getDefaultConfig({
-  appName: 'SYN3RGY',
+  appName: 'Eclipse.AI',
   projectId: import.meta.env.VITE_WC_PROJECT_ID || '48bdac974bd0ba94eb090d8a0c283f5d', 
   chains: [polygonAmoy],
 });

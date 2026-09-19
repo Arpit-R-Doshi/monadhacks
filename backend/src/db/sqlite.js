@@ -34,6 +34,7 @@ export function initDB() {
       id TEXT PRIMARY KEY,
       model_id TEXT,
       user_address TEXT,
+      session_id TEXT,
       prompt_text TEXT,
       encrypted_prompt_cid TEXT,
       response_text TEXT,
@@ -94,6 +95,19 @@ export function initDB() {
       added_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       PRIMARY KEY (model_id, wallet_address)
     );
+
+    CREATE TABLE IF NOT EXISTS withdrawals (
+      id TEXT PRIMARY KEY,
+      wallet_address TEXT NOT NULL,
+      amount REAL NOT NULL,
+      currency TEXT DEFAULT 'USD',
+      local_amount REAL,
+      method TEXT DEFAULT 'bank_transfer',
+      status TEXT DEFAULT 'pending',
+      payout_info TEXT,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      processed_at DATETIME
+    );
   `);
 
   console.log('[DB] SQLite initialized at', DB_PATH);
@@ -114,6 +128,18 @@ export function initDB() {
     }
   } catch (err) {
     console.error('[DB] Alter table check failed:', err.message);
+  }
+
+  // Add session_id to prompts table if not present
+  try {
+    const promptCols = db.pragma('table_info(prompts)');
+    const hasSessionId = promptCols.some(c => c.name === 'session_id');
+    if (!hasSessionId) {
+      db.exec(`ALTER TABLE prompts ADD COLUMN session_id TEXT;`);
+      console.log('[DB] Added session_id column to prompts table.');
+    }
+  } catch (err) {
+    console.error('[DB] session_id migration failed:', err.message);
   }
 
   return db;
@@ -154,10 +180,10 @@ export function getModelById(id) {
 // Prompt operations
 export function savePrompt(prompt) {
   const stmt = db.prepare(`
-    INSERT INTO prompts (id, model_id, user_address, prompt_text, encrypted_prompt_cid, input_tokens, status)
-    VALUES (?, ?, ?, ?, ?, ?, ?)
+    INSERT INTO prompts (id, model_id, user_address, session_id, prompt_text, encrypted_prompt_cid, input_tokens, status)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
   `);
-  return stmt.run(prompt.id, prompt.modelId, prompt.userAddress, prompt.promptText, prompt.encryptedPromptCid, prompt.inputTokens, prompt.status || 'pending');
+  return stmt.run(prompt.id, prompt.modelId, prompt.userAddress, prompt.sessionId || null, prompt.promptText, prompt.encryptedPromptCid, prompt.inputTokens, prompt.status || 'pending');
 }
 
 export function updatePromptResponse(promptId, response) {
@@ -341,5 +367,21 @@ export function getModelsSharedWithMe(walletAddress) {
     JOIN models m ON co.model_id = m.id
     WHERE co.wallet_address = ? AND m.is_active = 1
   `).all(walletAddress.toLowerCase());
+}
+
+// ── Withdrawals ──
+export function createWithdrawal({ id, walletAddress, amount, currency, localAmount, method, payoutInfo }) {
+  db.prepare(`
+    INSERT INTO withdrawals (id, wallet_address, amount, currency, local_amount, method, status, payout_info)
+    VALUES (?, ?, ?, ?, ?, ?, 'pending', ?)
+  `).run(id, walletAddress.toLowerCase(), amount, currency, localAmount, method, payoutInfo || '');
+}
+
+export function getWithdrawals(walletAddress) {
+  return db.prepare('SELECT * FROM withdrawals WHERE wallet_address = ? ORDER BY created_at DESC').all(walletAddress.toLowerCase());
+}
+
+export function updateWithdrawalStatus(id, status) {
+  db.prepare('UPDATE withdrawals SET status = ?, processed_at = CURRENT_TIMESTAMP WHERE id = ?').run(status, id);
 }
 

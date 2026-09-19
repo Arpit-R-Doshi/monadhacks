@@ -14,6 +14,7 @@ export default function ModelDetail() {
   const [model, setModel] = useState(null);
   const [messages, setMessages] = useState([]);
   const [historyLoaded, setHistoryLoaded] = useState(false);
+  const [sessionId, setSessionId] = useState(() => crypto.randomUUID());
   const [prompt, setPrompt] = useState('');
   const [imageFile, setImageFile] = useState(null);
   const [imageBase64, setImageBase64] = useState('');
@@ -31,6 +32,7 @@ export default function ModelDetail() {
     fetchModel();
     setMessages([]);  // clear on model switch
     setHistoryLoaded(false);
+    setSessionId(crypto.randomUUID()); // new session for each model
   }, [id]);
 
   // Load chat history and check subscription when wallet is connected
@@ -98,13 +100,13 @@ export default function ModelDetail() {
       });
       
       if (onChainBal < priceWei) {
-        toast.error('Insufficient on-chain SYN tokens. Please claim faucet tokens first!', { id: 'sub-tx' });
+        toast.error('Insufficient on-chain ECL tokens. Purchase more from the marketplace!', { id: 'sub-tx' });
         setSubscribing(false);
         return;
       }
       
-      // Step 1: Approve SYN tokens for PaymentManager
-      toast.loading('Step 1/3: Approve SYN tokens in MetaMask...', { id: 'sub-tx' });
+      // Step 1: Approve ECL tokens for PaymentManager
+      toast.loading('Step 1/3: Approve ECL tokens in MetaMask...', { id: 'sub-tx' });
       const approveHash = await writeContractAsync({
         address: appConfig.addresses.SYN3RGYToken,
         abi: tokenAbi,
@@ -201,7 +203,7 @@ export default function ModelDetail() {
     }
 
     if (balance < (model?.price_per_use || 1)) {
-      toast.error('Insufficient SYN balance. Use the faucet!');
+      toast.error('Insufficient ECL balance. Buy more tokens!');
       return;
     }
 
@@ -224,6 +226,7 @@ export default function ModelDetail() {
           prompt: prompt,
           userAddress: wallet,
           image: payloadImage,
+          sessionId: sessionId,
         }),
       });
 
@@ -238,7 +241,7 @@ export default function ModelDetail() {
         };
         setMessages(prev => [...prev, assistantMsg]);
         refreshBalance();
-        toast.success(`Inference complete! Cost: ${model.price_per_use} SYN`);
+        toast.success(`Inference complete! Cost: ${model.price_per_use} ECL`);
       } else {
         toast.error(data.error || 'Execution failed');
         setMessages(prev => [...prev, {
@@ -313,11 +316,11 @@ export default function ModelDetail() {
           <div className="detail-stats">
             <div className="detail-stat">
               <div className="label">Monthly Sub</div>
-              <div className="value" style={{ color: '#a78bfa' }}>{model.subscription_price} SYN</div>
+              <div className="value" style={{ color: '#a78bfa' }}>{model.subscription_price} ECL</div>
             </div>
             <div className="detail-stat">
               <div className="label">Pay Per Use</div>
-              <div className="value" style={{ color: '#a78bfa' }}>{model.price_per_use} SYN</div>
+              <div className="value" style={{ color: '#a78bfa' }}>{model.price_per_use} ECL</div>
             </div>
             <div className="detail-stat">
               <div className="label">Rate Limit</div>
@@ -329,7 +332,7 @@ export default function ModelDetail() {
             </div>
             <div className="detail-stat">
               <div className="label">Encryption</div>
-              <div className="value" style={{ color: '#00e676' }}>AES-256</div>
+              <div className="value" style={{ color: '#059669' }}>AES-256</div>
             </div>
             <div className="detail-stat">
               <div className="label">Storage</div>
@@ -354,6 +357,7 @@ export default function ModelDetail() {
                 onClick={() => {
                   setMessages([]);
                   setHistoryLoaded(true);
+                  setSessionId(crypto.randomUUID());
                   setPrompt('');
                   setImageFile(null);
                   setImageBase64('');
@@ -380,7 +384,7 @@ export default function ModelDetail() {
                  Tokens remaining: <span style={{ color: 'var(--text)', fontWeight: 'bold' }}>{subDetails.tokens_allocated - subDetails.tokens_used}</span> / {subDetails.tokens_allocated}
                </div>
             )}
-            {wallet && <span className="balance-badge">💎 {balance.toFixed(1)} SYN</span>}
+            {wallet && <span className="balance-badge">💎 {balance.toFixed(1)} ECL</span>}
           </div>
         </div>
 
@@ -513,7 +517,7 @@ export default function ModelDetail() {
             <h3>Subscribe to {model.name}</h3>
             <p style={{ margin: '1rem 0', color: 'var(--text-secondary)' }}>You need an active subscription to run inference on this model. A subscription gives you 50,000 tokens for 30 days.</p>
             <div style={{ display: 'flex', justifyContent: 'center', gap: '1rem', alignItems: 'center', marginBottom: '1.5rem' }}>
-              <span style={{ fontSize: '1.5rem', fontWeight: 'bold' }}>{model.subscription_price} SYN</span>
+              <span style={{ fontSize: '1.5rem', fontWeight: 'bold' }}>{model.subscription_price} ECL</span>
               <span style={{ color: 'var(--text-muted)' }}>/ month</span>
             </div>
             <button 

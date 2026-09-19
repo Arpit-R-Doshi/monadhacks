@@ -15,7 +15,7 @@ const router = Router();
  */
 router.post('/', async (req, res) => {
   try {
-    const { modelId, prompt, userAddress, image } = req.body;
+    const { modelId, prompt, userAddress, image, sessionId } = req.body;
 
     if (!modelId || !prompt || !userAddress) {
       return res.status(400).json({ error: 'Missing required fields: modelId, prompt, userAddress' });
@@ -95,6 +95,7 @@ router.post('/', async (req, res) => {
       id: promptId,
       modelId,
       userAddress,
+      sessionId: sessionId || null,
       promptText: finalPrompt,
       encryptedPromptCid: promptCid,
       inputTokens,

@@ -2,6 +2,7 @@ import { useState, useEffect, useContext } from 'react';
 import { motion } from 'framer-motion';
 import toast from 'react-hot-toast';
 import { AppContext } from '../App.jsx';
+import BuyECLModal from '../components/BuyECLModal.jsx';
 
 export default function Dashboard() {
   const { wallet, balance, API_URL } = useContext(AppContext);
@@ -15,6 +16,7 @@ export default function Dashboard() {
   const [snippetTab, setSnippetTab] = useState('curl');
   const [selectedModel, setSelectedModel] = useState('gemma-2b-demo');
   const [models, setModels] = useState([]);
+  const [showBuyModal, setShowBuyModal] = useState(false);
 
   useEffect(() => {
     if (wallet) {
@@ -148,7 +150,7 @@ response = requests.post(
 data = response.json()
 print(data["choices"][0]["message"]["content"])
 print(f"Tokens used: {data['usage']['total_tokens']}")
-print(f"Remaining balance: {data['syn3rgy']['remaining_balance']} SYN")`,
+print(f"Remaining balance: {data['syn3rgy']['remaining_balance']} ECL")`,
 
     javascript: `const API_KEY = "${apiKeyForSnippet}";
 const BASE_URL = "${baseUrl}/api/v1";
@@ -199,7 +201,14 @@ console.log("Remaining balance:", data.syn3rgy.remaining_balance, "SYN");`,
         <motion.div className="card stat-card" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
           <div className="stat-icon" style={{ background: 'rgba(108,43,217,0.15)', color: '#a78bfa' }}>💎</div>
           <div className="stat-value">{balance.toFixed(1)}</div>
-          <div className="stat-label">SYN Balance</div>
+          <div className="stat-label">ECL Balance</div>
+          <button
+            className="btn btn-primary btn-sm"
+            style={{ marginTop: '0.75rem', width: '100%' }}
+            onClick={() => setShowBuyModal(true)}
+          >
+            💰 Buy ECL
+          </button>
         </motion.div>
 
         <motion.div className="card stat-card" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
@@ -209,7 +218,7 @@ console.log("Remaining balance:", data.syn3rgy.remaining_balance, "SYN");`,
         </motion.div>
 
         <motion.div className="card stat-card" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
-          <div className="stat-icon" style={{ background: 'rgba(0,230,118,0.15)', color: '#00e676' }}>✅</div>
+          <div className="stat-icon" style={{ background: 'rgba(16,185,129,0.12)', color: '#059669' }}>✅</div>
           <div className="stat-value">{completedCount}</div>
           <div className="stat-label">Successful</div>
         </motion.div>
@@ -283,7 +292,7 @@ console.log("Remaining balance:", data.syn3rgy.remaining_balance, "SYN");`,
             borderRadius: '10px', padding: '1rem', marginBottom: '1.5rem',
           }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
-              <span style={{ fontWeight: 700, color: '#00e676', fontSize: '0.85rem' }}>⚠️ Copy your API key now — it won't be shown again!</span>
+              <span style={{ fontWeight: 700, color: '#059669', fontSize: '0.85rem' }}>⚠️ Copy your API key now — it won't be shown again!</span>
               <button onClick={() => setJustCreatedKey(null)} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontSize: '1.2rem' }}>×</button>
             </div>
             <div style={{
@@ -501,6 +510,8 @@ console.log("Remaining balance:", data.syn3rgy.remaining_balance, "SYN");`,
           </div>
         )}
       </motion.div>
+
+      <BuyECLModal isOpen={showBuyModal} onClose={() => setShowBuyModal(false)} />
     </div>
   );
 }

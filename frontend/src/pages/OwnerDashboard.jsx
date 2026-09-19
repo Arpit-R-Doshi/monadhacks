@@ -2,6 +2,7 @@ import { useState, useEffect, useContext } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { AppContext } from '../App.jsx';
+import CashoutModal from '../components/CashoutModal.jsx';
 
 export default function OwnerDashboard() {
   const { wallet, balance, API_URL } = useContext(AppContext);
@@ -17,6 +18,7 @@ export default function OwnerDashboard() {
   const [shareCoOwners, setShareCoOwners] = useState([]);
   const [transferModal, setTransferModal] = useState(null);
   const [transferAddress, setTransferAddress] = useState('');
+  const [showCashout, setShowCashout] = useState(false);
 
   useEffect(() => {
     if (wallet) {
@@ -123,9 +125,16 @@ export default function OwnerDashboard() {
         </motion.div>
 
         <motion.div className="card stat-card" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
-          <div className="stat-icon" style={{ background: 'rgba(0,230,118,0.15)', color: '#00e676' }}>💰</div>
+          <div className="stat-icon" style={{ background: 'rgba(16,185,129,0.12)', color: '#059669' }}>💰</div>
           <div className="stat-value">{totalEarnings.toFixed(1)}</div>
-          <div className="stat-label">Total Earnings (SYN)</div>
+          <div className="stat-label">Total Earnings (ECL)</div>
+          <button
+            className="btn btn-primary btn-sm"
+            style={{ marginTop: '0.75rem', width: '100%' }}
+            onClick={() => setShowCashout(true)}
+          >
+            💸 Cashout
+          </button>
         </motion.div>
 
         <motion.div className="card stat-card" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
@@ -178,7 +187,7 @@ export default function OwnerDashboard() {
           <div className="card empty-state" style={{ padding: '3rem' }}>
             <div className="icon">📦</div>
             <h3>No models yet</h3>
-            <p>Upload your first AI model to start earning SYN tokens!</p>
+            <p>Upload your first AI model to start earning ECL tokens!</p>
             <Link to="/owner/upload" className="btn btn-primary" style={{ marginTop: '1rem' }}>🚀 Upload Model</Link>
           </div>
         ) : (
@@ -222,7 +231,7 @@ export default function OwnerDashboard() {
                   <div className="model-footer">
                     <div className="model-price">
                       <span className="amount">{model.subscription_price}</span>
-                      <span className="unit">SYN / mo</span>
+                      <span className="unit">ECL / mo</span>
                     </div>
                     <div style={{ display: 'flex', gap: '0.5rem' }}>
                       <button
@@ -313,7 +322,7 @@ export default function OwnerDashboard() {
                   <div className="model-footer">
                     <div className="model-price">
                       <span className="amount">{model.subscription_price}</span>
-                      <span className="unit">SYN / mo</span>
+                      <span className="unit">ECL / mo</span>
                     </div>
                     <Link to={`/model/${model.id}`} className="btn btn-primary btn-sm">View Chat →</Link>
                   </div>
@@ -363,7 +372,7 @@ export default function OwnerDashboard() {
             </button>
 
             {shareCoOwners.length > 0 && (
-              <div style={{ fontSize: '0.8rem', color: shareCoOwners.reduce((s, c) => s + c.sharePercent, 0) > 100 ? '#ef5350' : '#00e676', marginBottom: '1rem' }}>
+              <div style={{ fontSize: '0.8rem', color: shareCoOwners.reduce((s, c) => s + c.sharePercent, 0) > 100 ? '#ef5350' : '#059669', marginBottom: '1rem' }}>
                 Total co-owner share: {shareCoOwners.reduce((s, c) => s + c.sharePercent, 0)}% — Your share: {100 - shareCoOwners.reduce((s, c) => s + c.sharePercent, 0)}%
               </div>
             )}
@@ -421,6 +430,8 @@ export default function OwnerDashboard() {
           </div>
         </div>
       )}
+
+      <CashoutModal isOpen={showCashout} onClose={() => setShowCashout(false)} />
     </div>
   );
 }

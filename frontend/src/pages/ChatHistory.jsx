@@ -26,7 +26,7 @@ export default function ChatHistory() {
       if (data.success) {
         setConversations(data.conversations);
         if (data.conversations.length > 0) {
-          setActiveConv(data.conversations[0].modelId);
+          setActiveConv(data.conversations[0].sessionId);
         }
       }
     } catch (err) {
@@ -65,7 +65,7 @@ export default function ChatHistory() {
     );
   });
 
-  const activeConvData = filteredConvs.find(c => c.modelId === activeConv);
+  const activeConvData = filteredConvs.find(c => c.sessionId === activeConv);
 
   if (!wallet) {
     return (
@@ -117,12 +117,12 @@ export default function ChatHistory() {
           <div className="history-sidebar">
             {filteredConvs.map((conv, i) => (
               <motion.div
-                key={conv.modelId}
+                key={conv.sessionId}
                 initial={{ opacity: 0, x: -10 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: i * 0.05 }}
-                className={`history-conv-item ${activeConv === conv.modelId ? 'active' : ''}`}
-                onClick={() => setActiveConv(conv.modelId)}
+                className={`history-conv-item ${activeConv === conv.sessionId ? 'active' : ''}`}
+                onClick={() => setActiveConv(conv.sessionId)}
               >
                 <div className="conv-icon">{getModelIcon(conv.modelName)}</div>
                 <div className="conv-meta">
@@ -133,7 +133,7 @@ export default function ChatHistory() {
                   </div>
                   <div className="conv-stats">
                     <span>{conv.messages.length} msg{conv.messages.length !== 1 ? 's' : ''}</span>
-                    <span>{formatDate(conv.messages[0]?.createdAt)}</span>
+                    <span>{formatDate(conv.messages[conv.messages.length - 1]?.createdAt)}</span>
                   </div>
                 </div>
               </motion.div>

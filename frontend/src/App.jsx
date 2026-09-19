@@ -121,9 +121,10 @@ function App() {
       <BrowserRouter>
         <Toaster position="top-right" toastOptions={{
           style: {
-            background: '#1a1a2e',
-            color: '#f0f0f5',
-            border: '1px solid rgba(255,255,255,0.06)',
+            background: 'rgba(20, 20, 30, 0.9)',
+            color: '#f1f5f9',
+            backdropFilter: 'blur(12px)',
+            border: '1px solid rgba(255,255,255,0.08)',
           },
         }} />
         <Navbar />
@@ -140,7 +141,7 @@ function App() {
           <Route path="/owner/upload" element={<UploadModel />} />
         </Routes>
         <footer className="footer">
-          <p>© 2026 SYN3RGY — Decentralized AI Model Marketplace | Built on Polygon Amoy</p>
+          <p>© 2026 Eclipse.AI — Decentralized AI Model Marketplace | Built on Polygon Amoy</p>
         </footer>
       </BrowserRouter>
     </AppContext.Provider>

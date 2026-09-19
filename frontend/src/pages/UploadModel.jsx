@@ -227,7 +227,7 @@ export default function UploadModel() {
 
           <div className="form-row">
             <div className="form-group" style={{ width: '100%' }}>
-              <label className="form-label">Subscription Rate (SYN/month)</label>
+              <label className="form-label">Subscription Rate (ECL/month)</label>
               <input className="form-input" type="number" name="subscriptionPrice" value={form.subscriptionPrice} onChange={handleChange} min="0" step="1" />
             </div>
           </div>
@@ -292,14 +292,14 @@ export default function UploadModel() {
             ))}
 
             {coOwners.length > 0 && (
-              <div style={{ fontSize: '0.8rem', color: coOwners.reduce((s, c) => s + c.sharePercent, 0) > 100 ? '#ef5350' : '#00e676', marginTop: '0.25rem' }}>
+              <div style={{ fontSize: '0.8rem', color: coOwners.reduce((s, c) => s + c.sharePercent, 0) > 100 ? '#ef5350' : '#059669', marginTop: '0.25rem' }}>
                 Co-owner total: {coOwners.reduce((s, c) => s + c.sharePercent, 0)}% — Your share: {100 - coOwners.reduce((s, c) => s + c.sharePercent, 0)}%
               </div>
             )}
           </div>
 
-          <div style={{ marginTop: '0.5rem', padding: '1rem', background: 'rgba(0, 230, 118, 0.08)', borderRadius: 'var(--radius-sm)', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
-            <strong>🛡️ Decentralization Info:</strong> Model parameters will be synced onto IPFS guaranteeing immutable persistence. Operations route through verifiable compute paths encrypted with AES-256 bound to <span style={{ fontFamily: 'monospace', color: '#00e676' }}>{wallet.slice(0, 10)}...</span>
+          <div style={{ marginTop: '0.5rem', padding: '1rem', background: 'rgba(16,185,129,0.08)', borderRadius: 'var(--radius-sm)', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+            <strong>🛡️ Decentralization Info:</strong> Model parameters will be synced onto IPFS guaranteeing immutable persistence. Operations route through verifiable compute paths encrypted with AES-256 bound to <span style={{ fontFamily: 'monospace', color: '#059669' }}>{wallet.slice(0, 10)}...</span>
           </div>
 
           <button className="btn btn-primary btn-lg" type="submit" disabled={loading} style={{ width: '100%', marginTop: '1.5rem' }}>

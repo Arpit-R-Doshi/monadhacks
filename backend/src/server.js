@@ -26,6 +26,7 @@ import historyRoutes from './routes/history.js';
 import subscriptionRoutes from './routes/subscriptions.js';
 import apiKeyRoutes from './routes/apikeys.js';
 import inferenceRoutes from './routes/inference.js';
+import paymentRoutes from './routes/payments.js';
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -51,6 +52,7 @@ app.use('/api/history', historyRoutes);
 app.use('/api/subscriptions', subscriptionRoutes);
 app.use('/api/keys', apiKeyRoutes);
 app.use('/api/v1', inferenceRoutes);
+app.use('/api/payments', paymentRoutes);
 
 // Health check
 app.get('/api/health', async (req, res) => {

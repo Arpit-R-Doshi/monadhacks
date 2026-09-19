@@ -26,7 +26,7 @@ export default function RoleSelect() {
       >
         <div className="role-header">
           <div className="role-logo">⚡</div>
-          <h1>Welcome to <span className="gradient-text">SYN3RGY</span></h1>
+          <h1>Welcome to <span className="gradient-text">Eclipse.AI</span></h1>
           <p>Choose how you want to use the decentralized AI marketplace</p>
         </div>
 
@@ -69,7 +69,7 @@ export default function RoleSelect() {
             <p>Register, manage, and monetize your AI models on the blockchain-backed marketplace.</p>
             <ul className="role-features">
               <li>🚀 Upload & register models</li>
-              <li>💰 Set pricing & earn SYN</li>
+              <li>💰 Set pricing & earn ECL</li>
               <li>📈 Track model performance</li>
               <li>🔐 Manage encryption keys</li>
             </ul>
