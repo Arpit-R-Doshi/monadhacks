@@ -4,7 +4,7 @@ import { motion } from 'framer-motion';
 import toast from 'react-hot-toast';
 import { usePublicClient, useWalletClient } from 'wagmi';
 import { parseEther, parseGwei, parseAbi } from 'viem';
-import { polygonAmoy } from 'wagmi/chains';
+import { monadTestnet } from '../main.jsx';
 import { AppContext } from '../App.jsx';
 
 export default function ModelDetail() {
@@ -28,7 +28,7 @@ export default function ModelDetail() {
 
   // Compute node state
   const [computeNodes, setComputeNodes] = useState([]);
-  const [selectedNode, setSelectedNode] = useState('node-alpha');
+  const [selectedNode, setSelectedNode] = useState('groq-cloud');
   
   const messagesEndRef = useRef(null);
   const fileInputRef = useRef(null);
@@ -110,17 +110,19 @@ export default function ModelDetail() {
 
       const price = model.subscription_price.toString();
       const priceWei = parseEther(price);
-      const tokenAbi = parseAbi(appConfig.abis.SYN3RGYToken);
+      const tokenAbi = parseAbi(appConfig.abis.EclipseToken || appConfig.abis.SYN3RGYToken);
       const paymentAbi = parseAbi(appConfig.abis.PaymentManager);
       const gasOverrides = {
         maxPriorityFeePerGas: parseGwei('40'),
         maxFeePerGas: parseGwei('50'),
       };
       
-      // Pre-flight: check on-chain SYN balance
+      const tokenAddress = appConfig.addresses.EclipseToken || appConfig.addresses.SYN3RGYToken;
+
+      // Pre-flight: check on-chain ECL balance
       toast.loading('Checking on-chain balance...', { id: 'sub-tx' });
       const onChainBal = await publicClient.readContract({
-        address: appConfig.addresses.SYN3RGYToken,
+        address: tokenAddress,
         abi: tokenAbi,
         functionName: 'balanceOf',
         args: [wallet],
@@ -135,11 +137,11 @@ export default function ModelDetail() {
       // Step 1: Approve ECL tokens for PaymentManager
       toast.loading('Step 1/3: Approve ECL tokens in MetaMask...', { id: 'sub-tx' });
       const approveHash = await walletClient.writeContract({
-        address: appConfig.addresses.SYN3RGYToken,
+        address: tokenAddress,
         abi: tokenAbi,
         functionName: 'approve',
         args: [appConfig.addresses.PaymentManager, priceWei],
-        chain: polygonAmoy,
+        chain: monadTestnet,
         account: wallet,
         ...gasOverrides,
       });
@@ -157,8 +159,8 @@ export default function ModelDetail() {
         return;
       }
       
-      // Buffer for Polygon RPC load-balancers
-      await new Promise(r => setTimeout(r, 3000));
+      // Buffer for RPC load-balancers
+      await new Promise(r => setTimeout(r, 2000));
       
       // Step 2: Subscribe on PaymentManager
       toast.loading('Step 2/3: Confirm subscription in MetaMask...', { id: 'sub-tx' });
@@ -167,7 +169,7 @@ export default function ModelDetail() {
         abi: paymentAbi,
         functionName: 'subscribe',
         args: [id, model.owner_address, 50000n, priceWei, 2592000n],
-        chain: polygonAmoy,
+        chain: monadTestnet,
         account: wallet,
         ...gasOverrides,
       });
@@ -500,13 +502,13 @@ export default function ModelDetail() {
                   )}
                   {msg.meta.txHash && !msg.meta.simulated && (
                     <a
-                      href={`https://amoy.polygonscan.com/tx/${msg.meta.txHash}`}
+                      href={`https://testnet.monadexplorer.com/tx/${msg.meta.txHash}`}
                       target="_blank"
                       rel="noreferrer"
-                      title="View transaction on Polygon Amoy Explorer"
-                      style={{ color: '#34d399', textDecoration: 'none' }}
+                      title="View transaction on Monad Explorer"
+                      style={{ color: '#836ef9', textDecoration: 'none' }}
                     >
-                      ⛓️ Polygonscan
+                      ⛓️ Monad Explorer
                     </a>
                   )}
                   {msg.meta.txHash && msg.meta.simulated && (

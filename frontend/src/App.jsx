@@ -20,7 +20,7 @@ function App() {
   const [wallet, setWallet] = useState(null);
   const [balance, setBalance] = useState(0);
   const [loading, setLoading] = useState(false);
-  const [userRole, setUserRole] = useState(() => localStorage.getItem('syn3rgy_role') || null);
+  const [userRole, setUserRole] = useState(() => localStorage.getItem('eclipse_role') || null);
   const [appConfig, setAppConfig] = useState(null);
   const { address, isConnected } = useAccount();
 
@@ -42,9 +42,9 @@ function App() {
   const handleSetRole = (role) => {
     setUserRole(role);
     if (role) {
-      localStorage.setItem('syn3rgy_role', role);
+      localStorage.setItem('eclipse_role', role);
     } else {
-      localStorage.removeItem('syn3rgy_role');
+      localStorage.removeItem('eclipse_role');
     }
   };
 
@@ -141,7 +141,7 @@ function App() {
           <Route path="/owner/upload" element={<UploadModel />} />
         </Routes>
         <footer className="footer">
-          <p>© 2026 ECLIPSE.AI — Decentralized AI Model Marketplace | Built on Polygon Amoy</p>
+          <p>© 2026 ECLIPSE.AI — Decentralized AI Model Marketplace | Built on Monad Testnet</p>
         </footer>
       </BrowserRouter>
     </AppContext.Provider>

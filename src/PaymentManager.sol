@@ -6,7 +6,7 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 /**
  * @title PaymentManager
- * @dev Handles pay-per-use and subscription payments for the SYN3RGY marketplace.
+ * @dev Handles pay-per-use and subscription payments for the ECLIPSE marketplace.
  * Revenue split: 85% model owner, 10% compute node, 5% platform.
  */
 contract PaymentManager is Ownable {

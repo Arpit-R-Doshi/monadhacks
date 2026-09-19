@@ -28,8 +28,8 @@ router.post('/generate', (req, res) => {
       return res.status(400).json({ error: 'Maximum 5 active API keys allowed' });
     }
 
-    // Generate key: syn3_<random 48 hex chars>
-    const rawKey = 'syn3_' + randomBytes(24).toString('hex');
+    // Generate key: ecl_<random 48 hex chars>
+    const rawKey = 'ecl_' + randomBytes(24).toString('hex');
     const keyHash = hashKey(rawKey);
     const keyPrefix = rawKey.slice(0, 12) + '...';
     const keyId = uuidv4();

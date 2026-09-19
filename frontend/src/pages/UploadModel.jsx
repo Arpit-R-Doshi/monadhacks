@@ -147,7 +147,7 @@ export default function UploadModel() {
             onClick={() => setIsRemote(false)}
             style={{ flex: 1, background: !isRemote ? 'var(--accent-primary)' : 'var(--bg-highlight)', border: '1px solid var(--border-color)', color: !isRemote ? '#fff' : 'var(--text-secondary)', fontSize: '1.25rem', padding: '0.8rem' }}
           >
-            Public Base Model (Ollama)
+            Public Base Model (Groq LPU)
           </button>
           <button 
             type="button"
@@ -195,11 +195,12 @@ export default function UploadModel() {
 
           {!isRemote ? (
             <div className="form-group" style={{ padding: '1rem', background: 'var(--bg-highlight)', borderRadius: '8px', border: '1px dashed var(--border-color)' }}>
-              <label className="form-label" style={{ color: 'var(--accent-primary)' }}>Select Ollama Base Engine *</label>
+              <label className="form-label" style={{ color: 'var(--accent-primary)' }}>Select Groq Cloud Base Engine *</label>
               <select className="form-select" name="ollamaModel" value={form.ollamaModel} onChange={handleChange}>
-                <option value="gemma:2b">Gemma 2B</option>
-                <option value="gemma:7b">Gemma 7B</option>
-                <option value="llama3:8b">Llama 3 8B</option>
+                <option value="llama-3.3-70b-versatile">Llama 3.3 70B Versatile</option>
+                <option value="llama-3.1-8b-instant">Llama 3.1 8B Instant</option>
+                <option value="mixtral-8x7b-32768">Mixtral 8x7B MoE</option>
+                <option value="gemma2-9b-it">Gemma 2 9B IT</option>
               </select>
             </div>
           ) : (

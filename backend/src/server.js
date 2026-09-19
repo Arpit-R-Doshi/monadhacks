@@ -10,7 +10,6 @@ const __dirname = dirname(__filename);
 // Load environment variables
 dotenv.config({ path: join(__dirname, '..', '.env'), override: true });
 dotenv.config({ path: join(__dirname, '..', '..', '.env'), override: true });
-console.log('[Config] OLLAMA_URL =', process.env.OLLAMA_URL);
 
 // Import modules
 import { initDB } from './db/sqlite.js';
@@ -39,7 +38,7 @@ app.use(cors({
 app.use(express.json({ limit: '50mb' }));
 
 // Initialize services
-console.log('\n🚀 Starting SYN3RGY Backend...\n');
+console.log('\n🚀 Starting ECLIPSE.AI Backend (Monad Testnet)...\n');
 
 const db = initDB();
 const blockchain = initBlockchain();
@@ -61,14 +60,16 @@ app.get('/api/health', async (req, res) => {
 
   res.json({
     status: 'ok',
-    platform: 'SYN3RGY',
+    platform: 'ECLIPSE',
+    network: 'Monad Testnet',
+    chainId: 10143,
     version: '1.0.0',
     services: {
       database: { connected: true },
       blockchain: {
         connected: !!blockchain.signer,
-        network: 'Polygon Amoy',
-        chainId: 80002,
+        network: 'Monad Testnet',
+        chainId: 10143,
       },
       ipfs,
       compute,
@@ -85,41 +86,49 @@ app.get('/api/config', async (req, res) => {
   });
 });
 
-// Seed demo models if DB is empty
+// Seed demo Groq models
 app.get('/api/seed', async (req, res) => {
   const { getModels, saveModel } = await import('./db/sqlite.js');
   const { generateKey } = await import('./services/encryption.js');
 
-  const existing = getModels();
-  if (existing.length > 0) {
-    return res.json({ message: 'Models already seeded', count: existing.length });
-  }
-
   const demoModels = [
     {
-      id: 'gemma-2b-demo',
-      name: 'Gemma 2B',
-      description: 'Google\'s lightweight open model. Fast and efficient for general text generation, summarization, and Q&A tasks. Ideal for quick responses with low latency.',
-      category: 'text-generation',
-      ipfsCid: 'QmDemo_Gemma2B_Encrypted_Model_CID',
+      id: 'llama-3.3-70b',
+      name: 'Llama 3.3 70B Versatile',
+      description: 'Meta\'s flagship open model running on Groq LPU inference. Exceptional reasoning, coding, and multilingual performance at ultra-high speed.',
+      category: 'general-intelligence',
+      ipfsCid: 'QmEclipse_Llama33_70B_Encrypted_CID',
       ownerAddress: '0x0D53ae112F699a30Af6daC175E353172B7Db7cB9',
-      ollamaModel: 'gemma:2b',
+      ollamaModel: 'llama-3.3-70b-versatile',
       pricePerUse: 1,
       subscriptionPrice: 10,
-      rateLimit: 10,
+      rateLimit: 30,
       encryptionKey: generateKey(),
     },
     {
-      id: 'llama3-8b-demo',
-      name: 'Llama 3 8B',
-      description: 'Meta\'s powerful open-source LLM. Excellent for complex reasoning, code generation, and creative writing. Best balance of quality and speed.',
-      category: 'text-generation',
-      ipfsCid: 'QmDemo_Llama3_8B_Encrypted_Model_CID',
+      id: 'llama-3.1-8b',
+      name: 'Llama 3.1 8B Instant',
+      description: 'Ultra-fast low-latency text model powered by Groq LPUs. Ideal for real-time assistants, classification, and summarization.',
+      category: 'instant-chat',
+      ipfsCid: 'QmEclipse_Llama31_8B_Encrypted_CID',
       ownerAddress: '0x0D53ae112F699a30Af6daC175E353172B7Db7cB9',
-      ollamaModel: 'llama3:8b',
-      pricePerUse: 2,
-      subscriptionPrice: 20,
-      rateLimit: 10,
+      ollamaModel: 'llama-3.1-8b-instant',
+      pricePerUse: 0.5,
+      subscriptionPrice: 5,
+      rateLimit: 60,
+      encryptionKey: generateKey(),
+    },
+    {
+      id: 'mixtral-8x7b',
+      name: 'Mixtral 8x7B MoE',
+      description: 'Mistral\'s leading mixture-of-experts model on Groq. High quality across code, mathematics, and complex reasoning.',
+      category: 'reasoning',
+      ipfsCid: 'QmEclipse_Mixtral_8x7B_Encrypted_CID',
+      ownerAddress: '0x0D53ae112F699a30Af6daC175E353172B7Db7cB9',
+      ollamaModel: 'mixtral-8x7b-32768',
+      pricePerUse: 1.5,
+      subscriptionPrice: 15,
+      rateLimit: 30,
       encryptionKey: generateKey(),
     },
   ];
@@ -128,12 +137,12 @@ app.get('/api/seed', async (req, res) => {
     saveModel(model);
   }
 
-  res.json({ message: 'Demo models seeded', models: demoModels.map(m => ({ id: m.id, name: m.name })) });
+  res.json({ message: 'ECLIPSE Groq models seeded', models: demoModels.map(m => ({ id: m.id, name: m.name })) });
 });
 
 // Start server
 app.listen(PORT, () => {
-  console.log(`✅ SYN3RGY Backend running on http://localhost:${PORT}`);
+  console.log(`✅ ECLIPSE Backend running on http://localhost:${PORT}`);
   console.log(`📊 Health check: http://localhost:${PORT}/api/health`);
   console.log(`🌱 Seed models:  http://localhost:${PORT}/api/seed\n`);
 });

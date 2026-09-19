@@ -4,3 +4,6 @@ out = "out"
 libs = ["lib"]
 optimizer = false
 solc_version = "0.8.20"
+
+[rpc_endpoints]
+monad_testnet = "https://testnet-rpc.monad.xyz/"

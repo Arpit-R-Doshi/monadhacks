@@ -33,7 +33,7 @@ router.post('/sync', async (req, res) => {
     // Verify on-chain presence
     const isValid = await hasActiveSubscription(userAddress, modelId);
     if (!isValid) {
-      return res.status(403).json({ error: 'No active subscription found on Polygon Amoy for this wallet.' });
+      return res.status(403).json({ error: 'No active subscription found on Monad Testnet for this wallet.' });
     }
 
     // Check if an active subscription already exists locally

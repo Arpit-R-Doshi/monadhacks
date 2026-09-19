@@ -10,18 +10,41 @@ import {
   darkTheme
 } from '@rainbow-me/rainbowkit';
 import { WagmiProvider, http } from 'wagmi';
-import { polygonAmoy } from 'wagmi/chains';
+import { defineChain } from 'viem';
 import {
   QueryClientProvider,
   QueryClient,
 } from '@tanstack/react-query';
 
+// Define Monad Testnet Chain
+export const monadTestnet = defineChain({
+  id: 10143,
+  name: 'Monad Testnet',
+  nativeCurrency: {
+    name: 'Monad',
+    symbol: 'MON',
+    decimals: 18,
+  },
+  rpcUrls: {
+    default: {
+      http: ['https://testnet-rpc.monad.xyz/'],
+    },
+  },
+  blockExplorers: {
+    default: {
+      name: 'Monad Explorer',
+      url: 'https://testnet.monadexplorer.com',
+    },
+  },
+  testnet: true,
+});
+
 const config = getDefaultConfig({
   appName: 'ECLIPSE.AI',
   projectId: '922886dc28d4f15371c6aa9bcb5c21cc',
-  chains: [polygonAmoy],
+  chains: [monadTestnet],
   transports: {
-    [polygonAmoy.id]: http('https://rpc-amoy.polygon.technology/'),
+    [monadTestnet.id]: http('https://testnet-rpc.monad.xyz/'),
   },
 });
 

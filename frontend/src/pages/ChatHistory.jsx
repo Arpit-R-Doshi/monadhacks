@@ -202,13 +202,13 @@ export default function ChatHistory() {
                                 )}
                                 {msg.txHash && (
                                   <a
-                                    href={`https://amoy.polygonscan.com/tx/${msg.txHash}`}
+                                    href={`https://testnet.monadexplorer.com/tx/${msg.txHash}`}
                                     target="_blank"
                                     rel="noreferrer"
-                                    style={{ color: '#34d399', textDecoration: 'none' }}
-                                    title="View transaction on Polygon Amoy Explorer"
+                                    style={{ color: '#836ef9', textDecoration: 'none' }}
+                                    title="View transaction on Monad Explorer"
                                   >
-                                    Polygonscan
+                                    Monad Explorer
                                   </a>
                                 )}
                               </div>

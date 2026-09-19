@@ -9,23 +9,23 @@ export default function Landing() {
 
   const features = [
     { icon: '🔐', title: 'E2E Encryption', desc: 'AES-256 encrypted models on IPFS. Only authorized compute nodes decrypt for inference.' },
-    { icon: '⛓️', title: 'On-Chain Ownership', desc: 'Immutable ownership on Polygon. Your wallet = your proof of authorship.' },
+    { icon: '⛓️', title: 'On-Chain Ownership', desc: 'Immutable ownership on Monad. Your wallet = your proof of authorship.' },
     { icon: '💰', title: 'Instant Revenue', desc: 'Smart contracts auto-split revenue. No middlemen, no delays.' },
     { icon: '🌐', title: 'IPFS Storage', desc: 'Censorship-resistant, decentralized model storage with zero single-point failure.' },
-    { icon: '⚡', title: 'Edge Compute', desc: 'Distributed inference nodes. Sub-second latency. GPU-accelerated.' },
-    { icon: '🔍', title: 'Full Auditability', desc: 'Every prompt, response, and payment immutably recorded on-chain.' },
+    { icon: '⚡', title: 'Edge Compute', desc: 'Groq Cloud LPU acceleration. Sub-second latency at 500+ T/s.' },
+    { icon: '🔍', title: 'Full Auditability', desc: 'Every prompt, response, and payment immutably recorded on Monad.' },
   ];
 
   const steps = [
-    { num: '01', title: 'Upload & Encrypt', desc: 'Encrypt your model with AES-256 and deploy to IPFS. Register ownership on-chain.', color: '#7c3aed' },
+    { num: '01', title: 'Upload & Encrypt', desc: 'Encrypt your model with AES-256 and deploy to IPFS. Register ownership on Monad.', color: '#7c3aed' },
     { num: '02', title: 'Discover & Select', desc: 'Browse the marketplace. Compare pricing, reviews, and capabilities.', color: '#3b82f6' },
     { num: '03', title: 'Pay & Execute', desc: 'ECL tokens deducted via smart contract. Prompt encrypted and routed to compute.', color: '#10b981' },
     { num: '04', title: 'Receive & Verify', desc: 'Inference result decrypted and returned. Full transaction proof on blockchain.', color: '#f59e0b' },
   ];
 
   const stats = [
-    { value: '2+', label: 'Live Models' },
-    { value: 'L2', label: 'Polygon Amoy' },
+    { value: '3+', label: 'Groq Models' },
+    { value: '10,000 TPS', label: 'Monad Testnet' },
     { value: 'AES-256', label: 'Encryption' },
     { value: 'IPFS', label: 'Storage' },
   ];

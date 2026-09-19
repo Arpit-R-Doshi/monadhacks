@@ -6,22 +6,22 @@ import "@openzeppelin/contracts/token/ERC20/extensions/ERC20Burnable.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 
 /**
- * @title SYN3RGYToken
- * @dev ERC-20 token for the SYN3RGY decentralized AI marketplace.
+ * @title EclipseToken
+ * @dev ERC-20 token for the ECLIPSE decentralized AI marketplace on Monad.
  * Used as platform credits for pay-per-use, subscriptions, and compute rewards.
  */
-contract SYN3RGYToken is ERC20, ERC20Burnable, Ownable {
+contract EclipseToken is ERC20, ERC20Burnable, Ownable {
     uint256 public constant MAX_SUPPLY = 10_000_000 * 10**18; // 10M tokens max
 
     // Faucet tracking
     mapping(address => uint256) public lastFaucetClaim;
-    uint256 public constant FAUCET_AMOUNT = 100 * 10**18; // 100 SYN per claim
+    uint256 public constant FAUCET_AMOUNT = 100 * 10**18; // 100 ECL per claim
     uint256 public constant FAUCET_COOLDOWN = 1 hours;
 
     event FaucetClaimed(address indexed user, uint256 amount);
     event TokensMinted(address indexed to, uint256 amount);
 
-    constructor(address initialOwner) ERC20("SYN3RGY", "SYN") Ownable(initialOwner) {
+    constructor(address initialOwner) ERC20("Eclipse AI", "ECL") Ownable(initialOwner) {
         // Mint initial supply to owner: 1M tokens
         _mint(initialOwner, 1_000_000 * 10**18);
     }
@@ -38,7 +38,7 @@ contract SYN3RGYToken is ERC20, ERC20Burnable, Ownable {
     }
 
     /**
-     * @dev Faucet for testnet. Users can claim 100 SYN every hour.
+     * @dev Faucet for testnet. Users can claim 100 ECL every hour.
      */
     function claimFaucet() external {
         require(

@@ -2,7 +2,7 @@
 pragma solidity ^0.8.20;
 
 import "forge-std/Script.sol";
-import "../src/SYN3RGYToken.sol";
+import "../src/EclipseToken.sol";
 import "../src/ModelRegistry.sol";
 import "../src/PaymentManager.sol";
 import "../src/PromptExecution.sol";
@@ -14,9 +14,9 @@ contract DeployAll is Script {
 
         vm.startBroadcast(deployerPrivateKey);
 
-        // 1. Deploy SYN3RGY Token
-        SYN3RGYToken token = new SYN3RGYToken(deployer);
-        console.log("SYN3RGY Token:", address(token));
+        // 1. Deploy Eclipse Token (ECL)
+        EclipseToken token = new EclipseToken(deployer);
+        console.log("Eclipse Token:", address(token));
 
         // 2. Deploy Model Registry
         ModelRegistry registry = new ModelRegistry(deployer);
@@ -32,7 +32,7 @@ contract DeployAll is Script {
 
         vm.stopBroadcast();
 
-        console.log("\n=== Deployment Complete ===");
+        console.log("\n=== Deployment on Monad Complete ===");
         console.log("Deployer:", deployer);
     }
 }

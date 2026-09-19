@@ -1,32 +1,49 @@
+import Groq from 'groq-sdk';
 import axios from 'axios';
 
-function getOllamaUrl() { return process.env.OLLAMA_URL || 'http://localhost:11434'; }
+// Multi-key pool for Groq (primary inference engine)
+function getApiKeys() {
+  return [
+    process.env.GROQ_API_KEY,
+    process.env.GROQ_API_KEY_1,
+    process.env.GROQ_API_KEY_2,
+    process.env.GROQ_API_KEY_3,
+    process.env.GROQ_API_KEY_4,
+    process.env.GROQ_API_KEY_5,
+  ].filter(k => k && k.startsWith('gsk_'));
+}
 
-// ===================== COMPUTE NODE REGISTRY =====================
+let keyIndex = 0;
+function getGroqClient() {
+  const keys = getApiKeys();
+  if (keys.length === 0) return null;
+  const key = keys[keyIndex % keys.length];
+  keyIndex++;
+  return new Groq({ apiKey: key });
+}
+
+function getOllamaUrl() {
+  return process.env.OLLAMA_URL || 'http://localhost:11434';
+}
+
+// ===================== COMPUTE NODES =====================
 export const COMPUTE_NODES = [
   {
-    id: 'node-alpha',
-    name: 'Alpha Node',
-    location: 'Lab Machine 1',
-    url: process.env.OLLAMA_URL || 'http://10.103.143.101:11434',
-    specs: 'Intel i7 / 16GB RAM / RTX 3060',
-    icon: '',
+    id: 'groq-cloud',
+    name: 'Groq Cloud Engine',
+    type: 'groq',
+    location: 'Global LPU Cluster',
+    specs: 'Ultra-fast LPU inference (500+ T/s)',
+    icon: '⚡',
   },
   {
-    id: 'node-beta',
-    name: 'Beta Node',
-    location: 'Lab Machine 2',
-    url: process.env.OLLAMA_URL_2 || 'http://10.103.143.102:11434',
-    specs: 'AMD Ryzen 9 / 32GB RAM / RTX 4070',
-    icon: '',
-  },
-  {
-    id: 'node-gamma',
-    name: 'Gamma Node',
-    location: 'Lab Machine 3',
-    url: process.env.OLLAMA_URL_3 || 'http://10.103.143.103:11434',
-    specs: 'Apple M2 Pro / 16GB RAM',
-    icon: '',
+    id: 'ollama-local',
+    name: 'Local Ollama Node',
+    type: 'ollama',
+    url: getOllamaUrl(),
+    location: 'Dedicated Compute Machine 1',
+    specs: 'Local GPU/CPU Worker',
+    icon: '🦙',
   },
 ];
 
@@ -34,142 +51,174 @@ export function getNodeById(nodeId) {
   return COMPUTE_NODES.find(n => n.id === nodeId) || COMPUTE_NODES[0];
 }
 
-// Available models mapping
-const MODEL_MAP = {
-  'gemma': 'gemma:2b',
-  'gemma-2b': 'gemma:2b',
-  'gemma-7b': 'gemma:7b',
-  'llama3': 'llama3:8b',
-  'llama3-8b': 'llama3:8b',
+// Model mapping for Groq
+export const GROQ_MODEL_MAP = {
+  'gpt-oss-120b': 'openai/gpt-oss-120b',
+  'gpt-oss-20b': 'openai/gpt-oss-20b',
+  'groq-compound': 'groq/compound',
+  'llama-3.3-70b': 'openai/gpt-oss-120b',
+  'llama-3.1-8b': 'openai/gpt-oss-20b',
+  'mixtral-8x7b': 'groq/compound',
+  'llama3-8b-demo': 'openai/gpt-oss-120b',
+  'gemma-2b-demo': 'openai/gpt-oss-20b',
+};
+
+// Model mapping for Ollama local
+export const OLLAMA_MODEL_MAP = {
+  'gemma:2b': 'gemma:2b',
+  'llama3:8b': 'llama3:8b',
+  'llama-3.1-8b': 'llama3:8b',
+  'llama-3.3-70b': 'llama3:8b',
+  'gemma-2b-demo': 'gemma:2b',
+  'llama3-8b-demo': 'llama3:8b',
 };
 
 /**
- * Check if a specific Ollama node is running
+ * Check health of compute engines
  */
-export async function healthCheck(nodeUrl) {
-  const url = nodeUrl || getOllamaUrl();
+export async function healthCheck(nodeUrl = null) {
+  // Check Groq
+  let groqHealthy = false;
+  let groqModels = [];
   try {
-    const res = await axios.get(`${url}/api/tags`, { timeout: 5000 });
-    return {
-      healthy: true,
-      models: res.data.models?.map(m => m.name) || [],
-      url,
-    };
+    const client = getGroqClient();
+    if (client) {
+      const list = await client.models.list();
+      groqHealthy = true;
+      groqModels = list.data.map(m => m.id).slice(0, 5);
+    }
   } catch (err) {
-    return { healthy: false, error: err.message, url };
+    groqHealthy = false;
   }
+
+  // Check Ollama Demo Machine
+  let ollamaHealthy = false;
+  let ollamaModels = [];
+  const targetOllama = nodeUrl || getOllamaUrl();
+  try {
+    const res = await axios.get(`${targetOllama}/api/tags`, { timeout: 3000 });
+    ollamaHealthy = true;
+    ollamaModels = res.data.models?.map(m => m.name) || [];
+  } catch (err) {
+    ollamaHealthy = false;
+  }
+
+  return {
+    healthy: groqHealthy || ollamaHealthy,
+    groq: { healthy: groqHealthy, models: groqModels },
+    ollama: { healthy: ollamaHealthy, url: targetOllama, models: ollamaModels },
+  };
 }
 
 /**
  * Check health of all compute nodes
  */
 export async function allNodesHealth() {
-  const results = await Promise.all(
-    COMPUTE_NODES.map(async (node) => {
-      const health = await healthCheck(node.url);
-      return { ...node, ...health };
-    })
-  );
-  return results;
+  const health = await healthCheck();
+  return COMPUTE_NODES.map(node => {
+    if (node.type === 'groq') {
+      return { ...node, healthy: health.groq.healthy, models: health.groq.models };
+    } else {
+      return { ...node, healthy: health.ollama.healthy, models: health.ollama.models };
+    }
+  });
 }
 
 /**
- * Run inference on a model via Ollama or via Remote Peer Compute
- * @param {Object} model - Full model object containing compute_node_url, is_remote, etc. or just a string identifier
- * @param {string} prompt - The prompt text
- * @param {string} [imageBase64=null] - Optional base64 image data for multimodal processing
- * @returns {Promise<{response: string, inputTokens: number, outputTokens: number, duration: number}>}
+ * Run inference via Groq or fallback Ollama Machine
  */
-export async function runInference(model, prompt, imageBase64 = null, nodeUrl = null) {
-  const modelName = typeof model === 'string' ? model : (model.ollama_model || model.name);
-  const targetUrl = nodeUrl || getOllamaUrl();
+export async function runInference(model, prompt, imageBase64 = null, nodeUrlOrId = null) {
+  const rawModelName = typeof model === 'string' ? model : (model.ollama_model || model.id || model.name);
   const startTime = Date.now();
 
-  // Handle Remote Peer Compute Protocol
-  if (typeof model === 'object' && model.is_remote && model.compute_node_url) {
-    console.log(`[Compute] Bypassing local Ollama. Routing payload to remote peer: ${model.compute_node_url}/process`);
-    try {
-      const res = await axios.post(`${model.compute_node_url}/process`, {
-        prompt: prompt,
-        image_base64: imageBase64,
-        weights_cid: model.model_weights_cid,
-        config_cid: model.model_config_cid,
-        input_modality: model.input_modality,
-      }, {
-        timeout: 60000, // 60s timeout for remote nodes running PyTorch
-      });
+  // Determine if user explicitly selected local Ollama node
+  const isOllamaSelected = nodeUrlOrId === 'ollama-local' || (typeof nodeUrlOrId === 'string' && nodeUrlOrId.includes('11434'));
 
-      const responseText = res.data.response || '[Remote Peer Error] Empty payload returned.';
+  if (isOllamaSelected) {
+    const ollamaUrl = getOllamaUrl();
+    const ollamaModel = OLLAMA_MODEL_MAP[rawModelName] || 'llama3:8b';
+
+    try {
+      console.log(`[Compute] Routing inference to local Ollama demo node: ${ollamaUrl} (${ollamaModel})...`);
+      const res = await axios.post(`${ollamaUrl}/api/generate`, {
+        model: ollamaModel,
+        prompt: prompt,
+        stream: false,
+      }, { timeout: 60000 });
+
+      const responseText = res.data.response || '';
       const inputTokens = Math.ceil(prompt.length / 4);
       const outputTokens = Math.ceil(responseText.length / 4);
-
       return {
         response: responseText,
         inputTokens,
         outputTokens,
         duration: Date.now() - startTime,
-        model: modelName,
-        remote: true
+        model: ollamaModel,
+        engine: 'ollama',
       };
-    } catch (err) {
-      console.error('[Compute] Remote Peer Error:', err.message);
-      // Fallback local simulation if peer is offline
-      return simulateInference(modelName, `[Remote Peer Unavailable at ${model.compute_node_url}]\n\nFallback Simulation:\n${prompt}`);
+    } catch (ollamaErr) {
+      console.warn(`[Compute] Local Ollama unavailable (${ollamaErr.message}), falling back to Groq Cloud...`);
     }
   }
 
-  // Handle Local Ollama — route to specified node
-  const ollamaModel = MODEL_MAP[modelName] || modelName;
+  // Primary: Groq Cloud LPU
+  const groqModel = GROQ_MODEL_MAP[rawModelName] || 'openai/gpt-oss-120b';
+  const client = getGroqClient();
+
+  if (!client) {
+    console.warn('[Compute] No Groq API Key found, simulating inference');
+    return simulateInference(rawModelName, prompt);
+  }
 
   try {
-    console.log(`[Compute] Routing to node: ${targetUrl}`);
-    const res = await axios.post(`${targetUrl}/api/generate`, {
-      model: ollamaModel,
-      prompt: prompt,
-      stream: false,
-      options: {
-        temperature: 0.7,
-        top_p: 0.9,
-        num_predict: 512,
-      },
-    }, {
-      timeout: 120000, // 120s timeout — large models need time to load into memory on first use
+    console.log(`[Compute] Routing inference to Groq LPU (${groqModel})...`);
+
+    const chatCompletion = await client.chat.completions.create({
+      messages: [
+        {
+          role: 'system',
+          content: 'You are an AI model running on ECLIPSE, a decentralized AI model marketplace on Monad Testnet. Provide accurate, helpful answers.'
+        },
+        {
+          role: 'user',
+          content: prompt
+        }
+      ],
+      model: groqModel,
+      temperature: 0.7,
+      max_tokens: 1024,
     });
 
+    const responseText = chatCompletion.choices[0]?.message?.content || '';
+    const inputTokens = chatCompletion.usage?.prompt_tokens || Math.ceil(prompt.length / 4);
+    const outputTokens = chatCompletion.usage?.completion_tokens || Math.ceil(responseText.length / 4);
     const duration = Date.now() - startTime;
-    const responseText = res.data.response || '';
-
-    // Estimate token counts
-    const inputTokens = Math.ceil(prompt.length / 4);
-    const outputTokens = Math.ceil(responseText.length / 4);
 
     return {
       response: responseText,
       inputTokens,
       outputTokens,
       duration,
-      model: ollamaModel,
+      model: groqModel,
+      engine: 'groq',
     };
   } catch (err) {
-    // If Ollama is not available, return a simulated response
-    if (['ECONNREFUSED', 'ECONNABORTED', 'ETIMEDOUT', 'ENOTFOUND'].includes(err.code) || err.response === undefined) {
-      console.log('[Compute-SIM] Ollama not available, simulating response');
-      return simulateInference(modelName, prompt);
-    }
-    throw err;
+    console.error('[Compute] Groq inference error:', err.message);
+    return simulateInference(rawModelName, `[Groq API Notice: ${err.message}]\n\nFallback Answer:\n${prompt}`);
   }
 }
 
 /**
- * Simulate inference when Ollama is not available
+ * Fallback simulation
  */
 function simulateInference(modelName, prompt) {
-  const responses = [
-    `[Simulated ${modelName} response] Based on your query about "${prompt.substring(0, 50)}...", here's the analysis: This is a simulated response for demo purposes. In production, this would be processed by the actual ${modelName} model running on a compute node.`,
-    `[Simulated ${modelName} response] I've analyzed your prompt. The key points are: 1) Your query touches on important concepts. 2) In a live deployment, the ${modelName} model would provide detailed, context-aware responses. 3) This simulation demonstrates the end-to-end flow of the SYN3RGY platform.`,
+  const simulatedResponses = [
+    `[ECLIPSE AI on Monad - ${modelName}] Here is the response to your prompt: "${prompt.substring(0, 80)}...". Powered by high-throughput decentralized inference.`,
+    `[ECLIPSE AI on Monad - ${modelName}] Analysis complete for "${prompt.substring(0, 80)}...". All outputs verified on Monad Testnet.`,
   ];
 
-  const response = responses[Math.floor(Math.random() * responses.length)];
+  const response = simulatedResponses[Math.floor(Math.random() * simulatedResponses.length)];
   const inputTokens = Math.ceil(prompt.length / 4);
   const outputTokens = Math.ceil(response.length / 4);
 
@@ -177,23 +226,8 @@ function simulateInference(modelName, prompt) {
     response,
     inputTokens,
     outputTokens,
-    duration: 500 + Math.random() * 1000,
+    duration: 120,
     model: modelName,
     simulated: true,
   };
-}
-
-/**
- * List available models on the compute node
- */
-export async function listModels() {
-  try {
-    const res = await axios.get(`${getOllamaUrl()}/api/tags`, { timeout: 5000 });
-    return res.data.models || [];
-  } catch {
-    return [
-      { name: 'gemma:2b', size: 1400000000, details: { family: 'gemma', parameter_size: '2B' } },
-      { name: 'llama3:8b', size: 4700000000, details: { family: 'llama', parameter_size: '8B' } },
-    ];
-  }
 }

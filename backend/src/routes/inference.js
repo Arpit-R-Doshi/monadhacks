@@ -24,9 +24,9 @@ function authenticateApiKey(req, res, next) {
   }
 
   const apiKey = authHeader.replace('Bearer ', '').trim();
-  if (!apiKey.startsWith('syn3_')) {
+  if (!apiKey.startsWith('ecl_') && !apiKey.startsWith('syn3_')) {
     return res.status(401).json({
-      error: { message: 'Invalid API key format', type: 'auth_error' }
+      error: { message: 'Invalid API key format. Expected ecl_...', type: 'auth_error' }
     });
   }
 
@@ -171,7 +171,7 @@ router.post('/chat/completions', authenticateApiKey, async (req, res) => {
         completion_tokens: inferenceResult.outputTokens || 0,
         total_tokens: totalTokens,
       },
-      syn3rgy: {
+      eclipse: {
         cost: costPerRequest,
         remaining_balance: user.balance - costPerRequest,
         ipfs_cid: responseCid,

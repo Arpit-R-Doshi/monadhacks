@@ -160,7 +160,7 @@ response = requests.post(
 data = response.json()
 print(data["choices"][0]["message"]["content"])
 print(f"Tokens used: {data['usage']['total_tokens']}")
-print(f"Remaining balance: {data['syn3rgy']['remaining_balance']} ECL")`,
+print(f"Remaining balance: {data['eclipse']['remaining_balance']} ECL")`,
 
     javascript: `const API_KEY = "${apiKeyForSnippet}";
 const BASE_URL = "${baseUrl}/api/v1";
@@ -182,7 +182,7 @@ const response = await fetch(\`\${BASE_URL}/chat/completions\`, {
 const data = await response.json();
 console.log(data.choices[0].message.content);
 console.log("Tokens used:", data.usage.total_tokens);
-console.log("Remaining balance:", data.syn3rgy.remaining_balance, "SYN");`,
+console.log("Remaining balance:", data.eclipse.remaining_balance, "ECL");`,
   };
 
   if (!wallet) {

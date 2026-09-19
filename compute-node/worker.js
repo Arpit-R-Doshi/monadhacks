@@ -8,7 +8,7 @@ const NODE_ADDRESS = process.env.NODE_ADDRESS || '0xComputeNode1';
 
 console.log(`
 ╔═══════════════════════════════════════════╗
-║     SYN3RGY Compute Node Worker          ║
+║     ECLIPSE Compute Node Worker (Monad)  ║
 ║     Listening for inference requests     ║
 ╠═══════════════════════════════════════════╣
 ║  Backend:  ${BACKEND_URL.padEnd(30)}║
