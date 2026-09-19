@@ -50,14 +50,18 @@ router.post('/', async (req, res) => {
        return res.status(402).json({ error: 'Subscription token limit reached for this month.' });
     }
 
+    const selectedNode = getNodeById(nodeId);
+    const isGroqNode = selectedNode?.type === 'groq' || selectedNode?.id === 'groq-cloud';
+    const effectiveImage = isGroqNode ? null : image;
+
     let finalPrompt = prompt;
 
-    // 3.5. Process Image Layer (OpenCV/OCR) — only for LOCAL models
+    // 3.5. Process Image Layer (OpenCV/OCR) — only for LOCAL models (and non-Groq)
     // Remote peer nodes handle the raw image directly via PyTorch
-    if (image && !model.is_remote) {
+    if (effectiveImage && !model.is_remote) {
       console.log('[Vision] Processing attached image layer locally (OCR)...');
       try {
-        const extractedInfo = await processImageAndExtractText(image);
+        const extractedInfo = await processImageAndExtractText(effectiveImage);
         if (extractedInfo && extractedInfo.trim() !== '') {
           finalPrompt = `I am attaching an image. Here is the visual extraction information from OpenCV/OCR:\n"${extractedInfo}"\n\nUser Question:\n${prompt}`;
         } else {
@@ -67,7 +71,7 @@ router.post('/', async (req, res) => {
         console.error('[Vision] Failed to process image:', visionErr);
         finalPrompt = `[Note: The user attached an image, but the computer vision extraction layer failed to process it.]\n\nUser Question:\n${prompt}`;
       }
-    } else if (image && model.is_remote) {
+    } else if (effectiveImage && model.is_remote) {
       console.log('[Vision] Remote model detected — sending raw image to peer node.');
     }
 
@@ -102,9 +106,8 @@ router.post('/', async (req, res) => {
       status: 'processing',
     });
 
-    // 8. Run inference via compute node (Ollama or Remote Peer)
-    const selectedNode = getNodeById(nodeId);
-    const inferenceResult = await runInference(model, finalPrompt, image, selectedNode.url);
+    // 8. Run inference via compute node (Ollama or Remote Peer or Groq)
+    const inferenceResult = await runInference(model, finalPrompt, effectiveImage, selectedNode.url);
     console.log(`[Execution] Inference completed on ${selectedNode.name} (${selectedNode.id})`);
 
     // 9. Encrypt response

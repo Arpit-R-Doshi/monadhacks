@@ -30,8 +30,18 @@ export default function ModelDetail() {
   const [computeNodes, setComputeNodes] = useState([]);
   const [selectedNode, setSelectedNode] = useState('groq-cloud');
   
+  const currentNode = computeNodes.find(n => n.id === selectedNode);
+  const isGroqModel = selectedNode === 'groq-cloud' || currentNode?.type === 'groq' || (!model?.is_remote && model?.input_modality !== 'multimodal');
+
   const messagesEndRef = useRef(null);
   const fileInputRef = useRef(null);
+
+  useEffect(() => {
+    if (isGroqModel && imageBase64) {
+      setImageFile(null);
+      setImageBase64('');
+    }
+  }, [selectedNode, isGroqModel]);
 
   useEffect(() => {
     fetchModel();
@@ -257,10 +267,10 @@ export default function ModelDetail() {
       return;
     }
 
-    const userMsg = { role: 'user', content: prompt, image: imageBase64, timestamp: new Date() };
+    const currentPrompt = prompt.trim();
+    const payloadImage = isGroqModel ? null : imageBase64;
+    const userMsg = { role: 'user', content: currentPrompt, image: payloadImage, timestamp: new Date() };
     setMessages(prev => [...prev, userMsg]);
-    
-    const payloadImage = imageBase64;
     
     setPrompt('');
     setImageFile(null);
@@ -273,7 +283,7 @@ export default function ModelDetail() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           modelId: id,
-          prompt: prompt,
+          prompt: currentPrompt,
           userAddress: wallet,
           image: payloadImage,
           sessionId: sessionId,
@@ -506,33 +516,6 @@ export default function ModelDetail() {
                   {msg.meta.inputTokens > 0 && <span>📥 {msg.meta.inputTokens} in</span>}
                   {msg.meta.outputTokens > 0 && <span>📤 {msg.meta.outputTokens} out</span>}
                   {msg.meta.duration > 0 && <span>⏱️ {(msg.meta.duration / 1000).toFixed(1)}s</span>}
-                  {msg.meta.promptCid && (
-                    <a
-                      href={`https://gateway.pinata.cloud/ipfs/${msg.meta.promptCid}`}
-                      target="_blank"
-                      rel="noreferrer"
-                      title="View encrypted prompt on IPFS"
-                      style={{ color: '#a78bfa', textDecoration: 'none' }}
-                    >
-                      📌 IPFS
-                    </a>
-                  )}
-                  {msg.meta.txHash && !msg.meta.simulated && (
-                    <a
-                      href={`https://testnet.monadexplorer.com/tx/${msg.meta.txHash}`}
-                      target="_blank"
-                      rel="noreferrer"
-                      title="View transaction on Monad Explorer"
-                      style={{ color: '#836ef9', textDecoration: 'none' }}
-                    >
-                      ⛓️ Monad Explorer
-                    </a>
-                  )}
-                  {msg.meta.txHash && msg.meta.simulated && (
-                    <span title="Simulated on-chain (testnet tx omitted)" style={{ color: 'var(--text-muted)' }}>
-                      🔵 Simulated
-                    </span>
-                  )}
                 </div>
               )}
             </div>
@@ -549,7 +532,7 @@ export default function ModelDetail() {
 
         {(!wallet || subscribed || Number(model.subscription_price) === 0) ? (
           <div className="prompt-input-container" style={{ position: 'relative' }}>
-            {imageBase64 && (
+            {!isGroqModel && imageBase64 && (
               <div className="image-preview" style={{ padding: '0.5rem', background: 'var(--bg-glass)', borderRadius: '8px 8px 0 0', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                 <img src={imageBase64} alt="Preview" style={{ height: '40px', borderRadius: '4px' }} />
                 <span style={{ fontSize: '0.8rem', color: 'var(--text-dim)' }}>{imageFile?.name}</span>
@@ -559,23 +542,27 @@ export default function ModelDetail() {
                 >✕</button>
               </div>
             )}
-            <div className="prompt-input" style={{ borderRadius: imageBase64 ? '0 0 8px 8px' : '8px' }}>
-                <button
-                  className="upload-btn"
-                  onClick={() => fileInputRef.current?.click()}
-                  disabled={!wallet || sending}
-                  style={{ background: 'none', border: 'none', color: 'var(--text-dim)', fontSize: '1.2rem', cursor: 'pointer', padding: '0 0.5rem' }}
-                  title="Attach Image"
-                >
-                  📸
-                </button>
-              <input
-                type="file"
-                ref={fileInputRef}
-                accept="image/*"
-                style={{ display: 'none' }}
-                onChange={handleImageUpload}
-              />
+            <div className="prompt-input" style={{ borderRadius: (!isGroqModel && imageBase64) ? '0 0 8px 8px' : '8px' }}>
+              {!isGroqModel && (
+                <>
+                  <button
+                    className="upload-btn"
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={!wallet || sending}
+                    style={{ background: 'none', border: 'none', color: 'var(--text-dim)', fontSize: '1.2rem', cursor: 'pointer', padding: '0 0.5rem' }}
+                    title="Attach Image"
+                  >
+                    📸
+                  </button>
+                  <input
+                    type="file"
+                    ref={fileInputRef}
+                    accept="image/*"
+                    style={{ display: 'none' }}
+                    onChange={handleImageUpload}
+                  />
+                </>
+              )}
               <textarea
                 value={prompt}
                 onChange={(e) => setPrompt(e.target.value)}

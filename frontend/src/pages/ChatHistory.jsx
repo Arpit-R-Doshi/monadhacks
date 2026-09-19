@@ -706,17 +706,6 @@ export default function ChatHistory() {
                                           Total: {(msg.inputTokens || 0) + (msg.outputTokens || 0)} tokens
                                         </span>
                                         {msg.durationMs > 0 && <span>• {(msg.durationMs / 1000).toFixed(2)}s</span>}
-                                        {msg.txHash && (
-                                          <a
-                                            href={`https://testnet.monadexplorer.com/tx/${msg.txHash}`}
-                                            target="_blank"
-                                            rel="noreferrer"
-                                            style={{ color: '#836ef9', textDecoration: 'none', marginLeft: 'auto' }}
-                                            title="View transaction on Monad Explorer"
-                                          >
-                                            Explorer ↗
-                                          </a>
-                                        )}
                                       </div>
                                     )}
                                   </div>
