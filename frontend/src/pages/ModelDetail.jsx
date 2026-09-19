@@ -10,8 +10,11 @@ export default function ModelDetail() {
   const [model, setModel] = useState(null);
   const [messages, setMessages] = useState([]);
   const [prompt, setPrompt] = useState('');
+  const [imageFile, setImageFile] = useState(null);
+  const [imageBase64, setImageBase64] = useState('');
   const [sending, setSending] = useState(false);
   const messagesEndRef = useRef(null);
+  const fileInputRef = useRef(null);
 
   useEffect(() => {
     fetchModel();
@@ -44,9 +47,14 @@ export default function ModelDetail() {
       return;
     }
 
-    const userMsg = { role: 'user', content: prompt, timestamp: new Date() };
+    const userMsg = { role: 'user', content: prompt, image: imageBase64, timestamp: new Date() };
     setMessages(prev => [...prev, userMsg]);
+    
+    const payloadImage = imageBase64;
+    
     setPrompt('');
+    setImageFile(null);
+    setImageBase64('');
     setSending(true);
 
     try {
@@ -57,6 +65,7 @@ export default function ModelDetail() {
           modelId: id,
           prompt: prompt,
           userAddress: wallet,
+          image: payloadImage,
         }),
       });
 
@@ -86,6 +95,21 @@ export default function ModelDetail() {
     }
 
     setSending(false);
+  };
+
+  const handleImageUpload = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error('Image must be less than 5MB');
+      return;
+    }
+
+    setImageFile(file);
+    const reader = new FileReader();
+    reader.onloadend = () => setImageBase64(reader.result);
+    reader.readAsDataURL(file);
   };
 
   const handleKeyDown = (e) => {
@@ -178,6 +202,11 @@ export default function ModelDetail() {
 
           {messages.map((msg, i) => (
             <div key={i} className={`message ${msg.role}`} style={msg.error ? { borderColor: 'var(--error)' } : {}}>
+              {msg.image && (
+                <div style={{ marginBottom: '0.5rem' }}>
+                  <img src={msg.image} alt="Upload" style={{ maxWidth: '200px', borderRadius: '8px' }} />
+                </div>
+              )}
               {msg.content}
               {msg.meta && (
                 <div className="meta">
@@ -200,22 +229,50 @@ export default function ModelDetail() {
           <div ref={messagesEndRef} />
         </div>
 
-        <div className="prompt-input">
-          <textarea
-            value={prompt}
-            onChange={(e) => setPrompt(e.target.value)}
-            onKeyDown={handleKeyDown}
-            placeholder={wallet ? `Ask ${model.name} anything...` : 'Connect wallet to start...'}
-            disabled={!wallet || sending}
-            rows={1}
-          />
-          <button
-            className="send-btn"
-            onClick={sendPrompt}
-            disabled={!wallet || !prompt.trim() || sending}
-          >
-            {sending ? '⏳' : '↑'}
-          </button>
+        <div className="prompt-input-container" style={{ position: 'relative' }}>
+          {imageBase64 && (
+            <div className="image-preview" style={{ padding: '0.5rem', background: 'var(--bg-glass)', borderRadius: '8px 8px 0 0', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <img src={imageBase64} alt="Preview" style={{ height: '40px', borderRadius: '4px' }} />
+              <span style={{ fontSize: '0.8rem', color: 'var(--text-dim)' }}>{imageFile?.name}</span>
+              <button 
+                onClick={() => { setImageFile(null); setImageBase64(''); }}
+                style={{ marginLeft: 'auto', background: 'none', border: 'none', color: 'var(--error)', cursor: 'pointer' }}
+              >✕</button>
+            </div>
+          )}
+          <div className="prompt-input" style={{ borderRadius: imageBase64 ? '0 0 8px 8px' : '8px' }}>
+              <button
+                className="upload-btn"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={!wallet || sending}
+                style={{ background: 'none', border: 'none', color: 'var(--text-dim)', fontSize: '1.2rem', cursor: 'pointer', padding: '0 0.5rem' }}
+                title="Attach Image"
+              >
+                📸
+              </button>
+            <input
+              type="file"
+              ref={fileInputRef}
+              accept="image/*"
+              style={{ display: 'none' }}
+              onChange={handleImageUpload}
+            />
+            <textarea
+              value={prompt}
+              onChange={(e) => setPrompt(e.target.value)}
+              onKeyDown={handleKeyDown}
+              placeholder={wallet ? `Ask ${model.name} anything...` : 'Connect wallet to start...'}
+              disabled={!wallet || sending}
+              rows={1}
+            />
+            <button
+              className="send-btn"
+              onClick={sendPrompt}
+              disabled={!wallet || !prompt.trim() || sending}
+            >
+              {sending ? '⏳' : '↑'}
+            </button>
+          </div>
         </div>
       </motion.div>
     </div>

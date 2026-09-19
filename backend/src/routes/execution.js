@@ -4,6 +4,7 @@ import { encrypt, decrypt } from '../services/encryption.js';
 import { uploadToIPFS } from '../services/ipfs.js';
 import { createPromptOnChain, submitResponseOnChain } from '../services/blockchain.js';
 import { runInference, healthCheck } from '../services/compute.js';
+import { processImageAndExtractText } from '../services/vision.js';
 import { getModelById, savePrompt, updatePromptResponse, getPromptsByUser, checkRateLimit, incrementModelUses, getOrCreateUser, updateUserBalance } from '../db/sqlite.js';
 
 const router = Router();
@@ -14,7 +15,7 @@ const router = Router();
  */
 router.post('/', async (req, res) => {
   try {
-    const { modelId, prompt, userAddress } = req.body;
+    const { modelId, prompt, userAddress, image } = req.body;
 
     if (!modelId || !prompt || !userAddress) {
       return res.status(400).json({ error: 'Missing required fields: modelId, prompt, userAddress' });
@@ -37,16 +38,37 @@ router.post('/', async (req, res) => {
       return res.status(402).json({ error: 'Insufficient SYN balance', balance: user.balance, required: model.price_per_use });
     }
 
+    let finalPrompt = prompt;
+
+    // 3.5. Process Image Layer (OpenCV/OCR)
+    if (image) {
+      console.log('[Vision] Processing attached image layer...');
+      try {
+        const extractedInfo = await processImageAndExtractText(image);
+        if (extractedInfo && extractedInfo.trim() !== '') {
+          finalPrompt = `I am attaching an image. Here is the visual extraction information from OpenCV/OCR:\n"${extractedInfo}"\n\nUser Question:\n${prompt}`;
+        } else {
+          finalPrompt = `I am attaching an image, but it appears to be empty or contain no recognizable text.\n\nUser Question:\n${prompt}`;
+        }
+      } catch (visionErr) {
+        console.error('[Vision] Failed to process image:', visionErr);
+        // Continue but inform the model the vision layer failed
+        finalPrompt = `[Note: The user attached an image, but the computer vision extraction layer failed to process it.]\n\nUser Question:\n${prompt}`;
+      }
+    }
+
     const promptId = uuidv4();
 
     // 4. Encrypt prompt
-    const encryptedPrompt = encrypt(prompt, model.encryption_key);
+    // Note: We don't encrypt the base64 image here to save DB/IPFS space and gas, 
+    // but in a fully secure architecture, you would encrypt images as well.
+    const encryptedPrompt = encrypt(finalPrompt, model.encryption_key);
 
     // 5. Upload encrypted prompt to IPFS
     const { cid: promptCid } = await uploadToIPFS(encryptedPrompt, `prompt_${promptId}`);
 
     // 6. Record prompt on-chain
-    const inputTokens = Math.ceil(prompt.length / 4);
+    const inputTokens = Math.ceil(finalPrompt.length / 4);
     const chainResult = await createPromptOnChain(promptId, modelId, promptCid, inputTokens);
 
     // 7. Save prompt to DB
@@ -54,14 +76,14 @@ router.post('/', async (req, res) => {
       id: promptId,
       modelId,
       userAddress,
-      promptText: prompt,
+      promptText: finalPrompt,
       encryptedPromptCid: promptCid,
       inputTokens,
       status: 'processing',
     });
 
     // 8. Run inference via compute node (Ollama)
-    const inferenceResult = await runInference(model.ollama_model, prompt);
+    const inferenceResult = await runInference(model.ollama_model, finalPrompt);
 
     // 9. Encrypt response
     const encryptedResponse = encrypt(inferenceResult.response, model.encryption_key);
