@@ -49,8 +49,8 @@ export default function CashoutModal({ isOpen, onClose, onSuccess }) {
   const handleCashout = async () => {
     const amount = Number(eclAmount);
     if (!amount || amount <= 0) return toast.error('Enter a valid amount');
-    if (amount > balance) return toast.error(`Insufficient balance (${balance.toFixed(2)} ECL)`);
-    if (amount < 1) return toast.error('Minimum cashout is 1 ECL');
+    if (amount > balance) return toast.error(`Insufficient balance (${balance.toFixed(2)} MON)`);
+    if (amount < 1) return toast.error('Minimum cashout is 1 MON');
     if (!payoutInfo.trim()) return toast.error('Enter your payout details');
 
     setProcessing(true);
@@ -130,7 +130,7 @@ export default function CashoutModal({ isOpen, onClose, onSuccess }) {
         }}>
           <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '0.2rem' }}>Available Balance</div>
           <div style={{ fontSize: '1.8rem', fontWeight: 800, background: 'var(--accent-gradient)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
-            {balance.toFixed(2)} ECL
+            {balance.toFixed(2)} MON
           </div>
           <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>≈ ${balance.toFixed(2)} USD</div>
         </div>
@@ -138,7 +138,7 @@ export default function CashoutModal({ isOpen, onClose, onSuccess }) {
         {/* Amount */}
         <div style={{ marginBottom: '1rem' }}>
           <label style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: '0.4rem' }}>
-            Amount (ECL)
+            Amount (MON)
           </label>
           <div style={{ display: 'flex', gap: '0.5rem' }}>
             <input
@@ -146,7 +146,7 @@ export default function CashoutModal({ isOpen, onClose, onSuccess }) {
               type="number"
               min="1"
               max={balance}
-              placeholder="Enter ECL amount"
+              placeholder="Enter MON amount"
               value={eclAmount}
               onChange={(e) => setEclAmount(e.target.value)}
               style={{ flex: 1 }}

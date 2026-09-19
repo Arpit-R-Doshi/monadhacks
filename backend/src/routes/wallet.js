@@ -1,26 +1,40 @@
 import { Router } from 'express';
-import { getTokenBalance, claimFaucet } from '../services/blockchain.js';
+import { getTokenBalance, getMonadNativeBalance, claimFaucet } from '../services/blockchain.js';
 import { getOrCreateUser, updateUserBalance } from '../db/sqlite.js';
 
 const router = Router();
 
 /**
  * POST /api/wallet/connect
- * Connect wallet and initialize user
+ * Connect wallet and initialize user with Monad testnet balance
  */
-router.post('/connect', (req, res) => {
+router.post('/connect', async (req, res) => {
   try {
     const { address } = req.body;
     if (!address) return res.status(400).json({ error: 'Wallet address required' });
 
     const user = getOrCreateUser(address);
+    let monadBal = '0';
+    try {
+      monadBal = await getMonadNativeBalance(address);
+      const parsedOnChain = parseFloat(monadBal);
+      if (parsedOnChain > 0 && user.balance < parsedOnChain) {
+        updateUserBalance(address, parsedOnChain - user.balance);
+      }
+    } catch (e) {
+      console.log('[Wallet] Monad balance sync notice:', e.message);
+    }
+
+    const updatedUser = getOrCreateUser(address);
     res.json({
       success: true,
+      currency: 'MON',
+      monadBalance: monadBal,
       user: {
-        address: user.address,
-        balance: user.balance,
-        totalSpent: user.total_spent,
-        totalPrompts: user.total_prompts,
+        address: updatedUser.address,
+        balance: updatedUser.balance,
+        totalSpent: updatedUser.total_spent,
+        totalPrompts: updatedUser.total_prompts,
       },
     });
   } catch (err) {
@@ -30,26 +44,41 @@ router.post('/connect', (req, res) => {
 
 /**
  * GET /api/wallet/balance/:address
- * Get user balance (on-chain + local)
+ * Get user balance (Monad test token balance + platform balance)
  */
 router.get('/balance/:address', async (req, res) => {
   try {
     const address = req.params.address;
     const user = getOrCreateUser(address);
-    let onChainBalance = '0';
+    let monadBalance = '0';
+    let tokenBalance = '0';
 
     try {
-      onChainBalance = await getTokenBalance(address);
+      monadBalance = await getMonadNativeBalance(address);
+      const parsedMonad = parseFloat(monadBalance);
+      if (parsedMonad > 0 && user.balance < parsedMonad) {
+        updateUserBalance(address, parsedMonad - user.balance);
+      }
     } catch (e) {
-      console.log('[Wallet] Could not fetch on-chain balance:', e.message);
+      console.log('[Wallet] Could not fetch native Monad balance:', e.message);
     }
+
+    try {
+      tokenBalance = await getTokenBalance(address);
+    } catch (e) {
+      console.log('[Wallet] Could not fetch on-chain token balance:', e.message);
+    }
+
+    const refreshedUser = getOrCreateUser(address);
 
     res.json({
       address,
-      platformBalance: user.balance,
-      onChainBalance,
-      totalSpent: user.total_spent,
-      totalPrompts: user.total_prompts,
+      currency: 'MON',
+      platformBalance: refreshedUser.balance,
+      monadBalance,
+      onChainBalance: monadBalance !== '0.00' ? monadBalance : tokenBalance,
+      totalSpent: refreshedUser.total_spent,
+      totalPrompts: refreshedUser.total_prompts,
     });
   } catch (err) {
     res.status(500).json({ error: err.message });

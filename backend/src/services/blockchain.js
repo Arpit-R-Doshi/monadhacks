@@ -101,6 +101,20 @@ export function getContractConfig() {
 }
 
 /**
+ * Get native Monad testnet balance for an address
+ */
+export async function getMonadNativeBalance(address) {
+  if (!provider) return '0.00';
+  try {
+    const bal = await provider.getBalance(address);
+    return ethers.formatEther(bal);
+  } catch (err) {
+    console.warn('[Blockchain] Could not fetch native Monad balance:', err.message);
+    return '0.00';
+  }
+}
+
+/**
  * Get on-chain token balance for an address
  */
 export async function getTokenBalance(address) {

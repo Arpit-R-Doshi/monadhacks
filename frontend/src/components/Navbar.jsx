@@ -66,10 +66,10 @@ export default function Navbar() {
           </button>
         )}
         {wallet && (
-          <div className="balance-badge">
-            <span className="balance-icon">◆</span>
-            <span>{balance.toFixed(1)}</span>
-            <span className="balance-unit">ECL</span>
+          <div className="balance-badge" title="Monad Testnet Balance">
+            <span className="balance-icon">⟠</span>
+            <span>{typeof balance === 'number' ? balance.toFixed(3) : balance}</span>
+            <span className="balance-unit">MON</span>
           </div>
         )}
         <ConnectButton showBalance={false} />

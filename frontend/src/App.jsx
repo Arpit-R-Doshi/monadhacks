@@ -10,7 +10,8 @@ import UploadModel from './pages/UploadModel.jsx';
 import ChatHistory from './pages/ChatHistory.jsx';
 import RoleSelect from './pages/RoleSelect.jsx';
 import OwnerDashboard from './pages/OwnerDashboard.jsx';
-import { useAccount } from 'wagmi';
+import { useAccount, useBalance } from 'wagmi';
+import { monadTestnet } from './main.jsx';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
@@ -23,6 +24,12 @@ function App() {
   const [userRole, setUserRole] = useState(() => localStorage.getItem('eclipse_role') || null);
   const [appConfig, setAppConfig] = useState(null);
   const { address, isConnected } = useAccount();
+
+  // Reactive on-chain native Monad testnet balance from Wagmi
+  const { data: onChainBalData, refetch: refetchOnChainBal } = useBalance({
+    address: address,
+    chainId: monadTestnet.id,
+  });
 
   // Fetch app config
   useEffect(() => {
@@ -67,9 +74,20 @@ function App() {
   const refreshBalance = async () => {
     if (!wallet) return;
     try {
+      if (refetchOnChainBal) {
+        const onChainRes = await refetchOnChainBal();
+        if (onChainRes.data?.formatted) {
+          const parsed = parseFloat(onChainRes.data.formatted);
+          if (parsed > 0) {
+            setBalance(parsed);
+          }
+        }
+      }
       const res = await fetch(`${API_URL}/api/wallet/balance/${wallet}`);
       const data = await res.json();
-      setBalance(data.platformBalance);
+      if (data.platformBalance !== undefined) {
+        setBalance(data.platformBalance);
+      }
     } catch (err) {
       console.error('Balance refresh error:', err);
     }
@@ -87,12 +105,23 @@ function App() {
       const data = await res.json();
       if (data.success) {
         setBalance(data.newBalance);
+        if (refetchOnChainBal) refetchOnChainBal();
       }
     } catch (err) {
       console.error('Faucet error:', err);
     }
     setLoading(false);
   };
+
+  // Sync on-chain balance changes when wallet connects or changes
+  useEffect(() => {
+    if (onChainBalData?.formatted) {
+      const onChainVal = parseFloat(onChainBalData.formatted);
+      if (onChainVal > 0) {
+        setBalance(onChainVal);
+      }
+    }
+  }, [onChainBalData]);
 
   // Listen for account changes via Wagmi hook
   useEffect(() => {
@@ -111,7 +140,7 @@ function App() {
 
   const contextValue = {
     wallet, balance, loading, setLoading,
-    refreshBalance, claimFaucet,
+    refreshBalance, claimFaucet, currency: 'MON',
     userRole, setUserRole: handleSetRole,
     API_URL, appConfig,
   };

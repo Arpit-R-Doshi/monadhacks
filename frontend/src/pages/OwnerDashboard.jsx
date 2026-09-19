@@ -149,7 +149,7 @@ export default function OwnerDashboard() {
 
         <motion.div className="card stat-card" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
           <div className="stat-value">{totalEarnings.toFixed(1)}</div>
-          <div className="stat-label">Total Earnings (ECL)</div>
+          <div className="stat-label">Total Earnings (MON)</div>
           <button
             className="btn btn-primary btn-sm"
             style={{ marginTop: '0.75rem', width: '100%', fontSize: '1.1rem' }}
@@ -182,7 +182,7 @@ export default function OwnerDashboard() {
           <div className="card empty-state" style={{ padding: '3rem' }}>
             <div className="icon">📦</div>
             <h3>No models yet</h3>
-            <p>Upload your first AI model to start earning ECL tokens!</p>
+            <p>Upload your first AI model to start earning MON tokens!</p>
             <Link to="/owner/upload" className="btn btn-primary" style={{ marginTop: '1rem' }}>🚀 Upload Model</Link>
           </div>
         ) : (
@@ -223,7 +223,7 @@ export default function OwnerDashboard() {
                   <div className="model-footer" style={{ flexDirection: 'column', alignItems: 'stretch', gap: '0.75rem' }}>
                     <div className="model-price">
                       <span className="amount">{model.subscription_price}</span>
-                      <span className="unit">ECL / mo</span>
+                      <span className="unit">MON / mo</span>
                     </div>
                     <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
                       <button
@@ -313,7 +313,7 @@ export default function OwnerDashboard() {
                   <div className="model-footer">
                     <div className="model-price">
                       <span className="amount">{model.subscription_price}</span>
-                      <span className="unit">ECL / mo</span>
+                      <span className="unit">MON / mo</span>
                     </div>
                     <Link to={`/model/${model.id}`} className="btn btn-primary btn-sm">View Chat →</Link>
                   </div>

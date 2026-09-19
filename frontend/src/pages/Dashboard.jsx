@@ -164,7 +164,7 @@ response = requests.post(
 data = response.json()
 print(data["choices"][0]["message"]["content"])
 print(f"Tokens used: {data['usage']['total_tokens']}")
-print(f"Remaining balance: {data['eclipse']['remaining_balance']} ECL")`,
+print(f"Remaining balance: {data['eclipse']['remaining_balance']} MON")`,
 
     javascript: `const API_KEY = "${apiKeyForSnippet}";
 const BASE_URL = "${baseUrl}/api/v1";
@@ -186,7 +186,7 @@ const response = await fetch(\`\${BASE_URL}/chat/completions\`, {
 const data = await response.json();
 console.log(data.choices[0].message.content);
 console.log("Tokens used:", data.usage.total_tokens);
-console.log("Remaining balance:", data.eclipse.remaining_balance, "ECL");`,
+console.log("Remaining balance:", data.eclipse.remaining_balance, "MON");`,
   };
 
   if (!wallet) {
@@ -278,14 +278,14 @@ console.log("Remaining balance:", data.eclipse.remaining_balance, "ECL");`,
 
       <div className="dashboard-grid">
         <motion.div className="card stat-card" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
-          <div className="stat-value">{balance.toFixed(1)}</div>
-          <div className="stat-label">ECL Balance</div>
+          <div className="stat-value">{typeof balance === 'number' ? balance.toFixed(3) : balance}</div>
+          <div className="stat-label">MON Balance (Monad)</div>
           <button
             className="btn btn-primary btn-sm"
             style={{ marginTop: '0.75rem', width: '100%' }}
             onClick={() => setShowBuyModal(true)}
           >
-            Buy ECL
+            ⚡ Get MON Tokens
           </button>
         </motion.div>
 
@@ -364,7 +364,7 @@ console.log("Remaining balance:", data.eclipse.remaining_balance, "ECL");`,
                   borderRadius: '8px', padding: '0.35rem 0.65rem', fontSize: '0.75rem',
                 }}>
                   <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{m.name}</span>
-                  <span style={{ color: '#a78bfa', fontWeight: 700 }}>{m.price_per_use} ECL</span>
+                  <span style={{ color: '#a78bfa', fontWeight: 700 }}>{m.price_per_use} MON</span>
                   <span style={{ color: 'var(--text-muted)' }}>/call</span>
                 </div>
               ))}

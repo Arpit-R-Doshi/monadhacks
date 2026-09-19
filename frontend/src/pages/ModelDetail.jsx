@@ -129,7 +129,7 @@ export default function ModelDetail() {
       });
       
       if (onChainBal < priceWei) {
-        toast.error('Insufficient on-chain ECL tokens. Purchase more from the marketplace!', { id: 'sub-tx' });
+        toast.error('Insufficient Monad testnet balance. Claim tokens from the faucet!', { id: 'sub-tx' });
         setSubscribing(false);
         return;
       }
@@ -275,7 +275,7 @@ export default function ModelDetail() {
         };
         setMessages(prev => [...prev, assistantMsg]);
         refreshBalance();
-        toast.success(`Inference complete! Cost: ${model.price_per_use} ECL`);
+        toast.success(`Inference complete! Cost: ${model.price_per_use} MON`);
       } else {
         toast.error(data.error || 'Execution failed');
         setMessages(prev => [...prev, {
@@ -350,11 +350,11 @@ export default function ModelDetail() {
           <div className="detail-stats">
             <div className="detail-stat">
               <div className="label">Monthly Sub</div>
-              <div className="value" style={{ color: '#a78bfa' }}>{model.subscription_price} ECL</div>
+              <div className="value" style={{ color: '#a78bfa' }}>{model.subscription_price} MON</div>
             </div>
             <div className="detail-stat">
               <div className="label">API Price</div>
-              <div className="value" style={{ color: '#a78bfa' }}>{model.price_per_use} ECL</div>
+              <div className="value" style={{ color: '#a78bfa' }}>{model.price_per_use} MON</div>
             </div>
             <div className="detail-stat">
               <div className="label">Rate Limit</div>
@@ -418,7 +418,7 @@ export default function ModelDetail() {
                  Tokens remaining: <span style={{ color: 'var(--text)', fontWeight: 'bold' }}>{subDetails.tokens_allocated - subDetails.tokens_used}</span> / {subDetails.tokens_allocated}
                </div>
             )}
-            {wallet && <span className="balance-badge">💎 {balance.toFixed(1)} ECL</span>}
+            {wallet && <span className="balance-badge">💎 {typeof balance === 'number' ? balance.toFixed(3) : balance} MON</span>}
           </div>
         </div>
 
@@ -581,7 +581,7 @@ export default function ModelDetail() {
             <h3>Subscribe to {model.name}</h3>
             <p style={{ margin: '1rem 0', color: 'var(--text-secondary)' }}>You need an active subscription to run inference on this model. A subscription gives you 50,000 tokens for 30 days.</p>
             <div style={{ display: 'flex', justifyContent: 'center', gap: '1rem', alignItems: 'center', marginBottom: '1.5rem' }}>
-              <span style={{ fontSize: '1.5rem', fontWeight: 'bold' }}>{model.subscription_price} ECL</span>
+              <span style={{ fontSize: '1.5rem', fontWeight: 'bold' }}>{model.subscription_price} MON</span>
               <span style={{ color: 'var(--text-muted)' }}>/ month</span>
             </div>
             <button 

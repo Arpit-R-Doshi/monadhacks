@@ -227,7 +227,7 @@ export default function UploadModel() {
 
           <div className="form-row">
             <div className="form-group" style={{ width: '100%' }}>
-              <label className="form-label">Subscription Rate (ECL/month)</label>
+              <label className="form-label">Subscription Rate (MON/month)</label>
               <input className="form-input" type="number" name="subscriptionPrice" value={form.subscriptionPrice} onChange={handleChange} min="0" step="1" />
             </div>
           </div>

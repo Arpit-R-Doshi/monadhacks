@@ -102,7 +102,7 @@ export default function Marketplace() {
                   <div className="model-footer">
                     <div className="model-price">
                       <span className="amount">{model.price_per_use || 1}</span>
-                      <span className="unit">ECL / use</span>
+                      <span className="unit">MON / use</span>
                     </div>
                     <span className="btn btn-primary" style={{ padding: '0.55rem 1.1rem', fontSize: '1.1rem', letterSpacing: '0.06em' }}>Try Now →</span>
                   </div>

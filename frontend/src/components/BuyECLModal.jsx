@@ -2,248 +2,179 @@ import { useState, useContext } from 'react';
 import toast from 'react-hot-toast';
 import { AppContext } from '../App.jsx';
 
-const CURRENCIES = [
-  { code: 'INR', symbol: '₹', name: 'Indian Rupee', rate: 84.0 },
-  { code: 'USD', symbol: '$', name: 'US Dollar', rate: 1 },
-  { code: 'EUR', symbol: '€', name: 'Euro', rate: 0.92 },
-  { code: 'GBP', symbol: '£', name: 'British Pound', rate: 0.79 },
-  { code: 'AED', symbol: 'د.إ', name: 'UAE Dirham', rate: 3.67 },
-  { code: 'SGD', symbol: 'S$', name: 'Singapore Dollar', rate: 1.34 },
-  { code: 'JPY', symbol: '¥', name: 'Japanese Yen', rate: 149.0 },
-  { code: 'AUD', symbol: 'A$', name: 'Australian Dollar', rate: 1.53 },
-  { code: 'CAD', symbol: 'C$', name: 'Canadian Dollar', rate: 1.36 },
-  { code: 'BRL', symbol: 'R$', name: 'Brazilian Real', rate: 4.97 },
-  { code: 'MYR', symbol: 'RM', name: 'Malaysian Ringgit', rate: 4.72 },
-  { code: 'THB', symbol: '฿', name: 'Thai Baht', rate: 35.0 },
-  { code: 'KRW', symbol: '₩', name: 'South Korean Won', rate: 1320.0 },
-  { code: 'PHP', symbol: '₱', name: 'Philippine Peso', rate: 56.0 },
-  { code: 'IDR', symbol: 'Rp', name: 'Indonesian Rupiah', rate: 15700.0 },
-  { code: 'ZAR', symbol: 'R', name: 'South African Rand', rate: 18.5 },
-  { code: 'SAR', symbol: '﷼', name: 'Saudi Riyal', rate: 3.75 },
-  { code: 'HKD', symbol: 'HK$', name: 'Hong Kong Dollar', rate: 7.82 },
-  { code: 'CHF', symbol: 'Fr', name: 'Swiss Franc', rate: 0.88 },
-  { code: 'CNY', symbol: '¥', name: 'Chinese Yuan', rate: 7.25 },
-  { code: 'BDT', symbol: '৳', name: 'Bangladeshi Taka', rate: 110.0 },
-  { code: 'LKR', symbol: 'Rs', name: 'Sri Lankan Rupee', rate: 310.0 },
-  { code: 'NPR', symbol: 'रू', name: 'Nepalese Rupee', rate: 133.0 },
-];
-
-const QUICK_AMOUNTS = [5, 10, 25, 50, 100];
-
 export default function BuyECLModal({ isOpen, onClose }) {
-  const { wallet, refreshBalance, API_URL } = useContext(AppContext);
-  const [currency, setCurrency] = useState('INR');
-  const [amount, setAmount] = useState('');
-  const [processing, setProcessing] = useState(false);
+  const { wallet, balance, refreshBalance, claimFaucet, API_URL } = useContext(AppContext);
+  const [claiming, setClaiming] = useState(false);
 
-  const selectedCurrency = CURRENCIES.find(c => c.code === currency) || CURRENCIES[0];
-  const eclTokens = amount ? +(Number(amount) / selectedCurrency.rate).toFixed(2) : 0;
+  if (!isOpen) return null;
 
-  const handleQuickAmount = (usdValue) => {
-    const localAmount = Math.round(usdValue * selectedCurrency.rate);
-    setAmount(localAmount.toString());
-  };
-
-  const handlePayment = async () => {
-    if (!amount || Number(amount) <= 0) {
-      toast.error('Enter a valid amount');
-      return;
-    }
+  const handleClaim = async () => {
     if (!wallet) {
       toast.error('Connect your wallet first');
       return;
     }
 
-    setProcessing(true);
+    setClaiming(true);
     try {
-      // 1. Create order on backend
-      const orderRes = await fetch(`${API_URL}/api/payments/create-order`, {
+      const res = await fetch(`${API_URL}/api/wallet/faucet`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          amount: Number(amount),
-          currency: currency,
-          walletAddress: wallet,
-        }),
+        body: JSON.stringify({ address: wallet }),
       });
-      const orderData = await orderRes.json();
-
-      if (!orderData.success) {
-        toast.error(orderData.error || 'Failed to create order');
-        setProcessing(false);
-        return;
+      const data = await res.json();
+      if (data.success) {
+        toast.success(`Claimed ${data.credited || 10} MON test tokens!`);
+        refreshBalance();
+        onClose();
+      } else {
+        toast.error(data.error || 'Faucet claim failed');
       }
-
-      // 2. Open Razorpay checkout
-      const options = {
-        key: orderData.key,
-        amount: orderData.order.amount,
-        currency: orderData.order.currency,
-        name: 'ECLIPSE.AI',
-        description: `Purchase ${orderData.order.eclTokens} ECL Tokens`,
-        order_id: orderData.order.id,
-        handler: async function (response) {
-          // 3. Verify payment on backend
-          try {
-            const verifyRes = await fetch(`${API_URL}/api/payments/verify`, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                razorpay_order_id: response.razorpay_order_id,
-                razorpay_payment_id: response.razorpay_payment_id,
-                razorpay_signature: response.razorpay_signature,
-                walletAddress: wallet,
-                eclTokens: orderData.order.eclTokens,
-              }),
-            });
-            const verifyData = await verifyRes.json();
-
-            if (verifyData.success) {
-              toast.success(`🎉 ${orderData.order.eclTokens} ECL tokens credited!`);
-              refreshBalance();
-              onClose();
-            } else {
-              toast.error(verifyData.error || 'Verification failed');
-            }
-          } catch (err) {
-            toast.error('Payment verification failed: ' + err.message);
-          }
-        },
-        prefill: {
-          name: 'ECLIPSE.AI User',
-        },
-        theme: {
-          color: '#7c3aed',
-        },
-        modal: {
-          ondismiss: function () {
-            setProcessing(false);
-          },
-        },
-      };
-
-      const rzp = new window.Razorpay(options);
-      rzp.open();
     } catch (err) {
-      toast.error('Error: ' + err.message);
+      toast.error('Network error requesting tokens');
     }
-    setProcessing(false);
+    setClaiming(false);
   };
 
-  if (!isOpen) return null;
+  const handleAddMonadNetwork = async () => {
+    if (!window.ethereum) {
+      toast.error('No Web3 wallet detected');
+      return;
+    }
+    try {
+      await window.ethereum.request({
+        method: 'wallet_addEthereumChain',
+        params: [{
+          chainId: '0x279f', // 10143 in hex
+          chainName: 'Monad Testnet',
+          nativeCurrency: {
+            name: 'Monad',
+            symbol: 'MON',
+            decimals: 18,
+          },
+          rpcUrls: ['https://testnet-rpc.monad.xyz/'],
+          blockExplorerUrls: ['https://testnet.monadexplorer.com'],
+        }],
+      });
+      toast.success('Monad Testnet added to wallet!');
+    } catch (err) {
+      toast.error('Failed to add network: ' + err.message);
+    }
+  };
 
   return (
-    <div style={{
-      position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-      background: 'rgba(0,0,0,0.35)', backdropFilter: 'blur(4px)',
-      display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000,
-    }}>
-      <div className="card" style={{
-        width: '480px', maxHeight: '85vh', overflow: 'auto', padding: '2rem',
-        background: 'rgba(15, 15, 25, 0.95)', border: '1px solid rgba(255,255,255,0.08)',
-        backdropFilter: 'blur(20px)',
-      }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-          <h3 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 700 }}>💰 Buy ECL Tokens</h3>
-          <button onClick={onClose} style={{
-            background: 'none', border: 'none', fontSize: '1.3rem', cursor: 'pointer',
-            color: 'var(--text-muted)', lineHeight: 1,
-          }}>✕</button>
-        </div>
-
-        <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '1.25rem' }}>
-          1 USD = 1 ECL Token. Select your currency and amount below.
-        </p>
-
-        {/* Currency Selector */}
-        <div style={{ marginBottom: '1rem' }}>
-          <label style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: '0.4rem' }}>
-            Currency
-          </label>
-          <select
-            className="form-select"
-            value={currency}
-            onChange={(e) => { setCurrency(e.target.value); setAmount(''); }}
-            style={{ fontSize: '0.9rem' }}
-          >
-            {CURRENCIES.map(c => (
-              <option key={c.code} value={c.code}>
-                {c.symbol} {c.code} — {c.name}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        {/* Quick Amount Buttons */}
-        <div style={{ marginBottom: '0.75rem' }}>
-          <label style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: '0.4rem' }}>
-            Quick Select (USD equivalent)
-          </label>
-          <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
-            {QUICK_AMOUNTS.map(usd => (
-              <button
-                key={usd}
-                type="button"
-                onClick={() => handleQuickAmount(usd)}
-                className="nav-action-btn"
-                style={{
-                  padding: '0.4rem 0.85rem', fontSize: '0.8rem',
-                  background: eclTokens === usd ? 'var(--accent-primary)' : undefined,
-                  color: eclTokens === usd ? 'white' : undefined,
-                }}
-              >
-                ${usd} → {usd} ECL
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Custom Amount */}
-        <div style={{ marginBottom: '1rem' }}>
-          <label style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: '0.4rem' }}>
-            Amount ({selectedCurrency.symbol} {selectedCurrency.code})
-          </label>
-          <input
-            className="form-input"
-            type="number"
-            min="1"
-            placeholder={`Enter amount in ${selectedCurrency.code}`}
-            value={amount}
-            onChange={(e) => setAmount(e.target.value)}
-            style={{ fontSize: '1rem' }}
-          />
-        </div>
-
-        {/* Conversion Preview */}
-        {amount && Number(amount) > 0 && (
-          <div style={{
-            padding: '1rem', borderRadius: '12px', marginBottom: '1.25rem',
-            background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.06)',
-            textAlign: 'center',
-          }}>
-            <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '0.3rem' }}>You will receive</div>
-            <div style={{ fontSize: '1.8rem', fontWeight: 800, background: 'var(--accent-gradient)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
-              {eclTokens} ECL
-            </div>
-            <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.3rem' }}>
-              {selectedCurrency.symbol}{Number(amount).toLocaleString()} {selectedCurrency.code} × {(1 / selectedCurrency.rate).toFixed(4)} = {eclTokens} ECL
-            </div>
-          </div>
-        )}
-
-        {/* Pay Button */}
+    <div
+      style={{
+        position: 'fixed', inset: 0, zIndex: 9999,
+        background: 'rgba(0, 0, 0, 0.75)', backdropFilter: 'blur(8px)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem',
+      }}
+      onClick={onClose}
+    >
+      <div
+        style={{
+          background: 'var(--bg-card, #121224)',
+          border: '1px solid var(--border-color, rgba(167, 139, 250, 0.3))',
+          borderRadius: '16px', maxWidth: '480px', width: '100%',
+          padding: '2rem', color: '#fff', position: 'relative',
+          boxShadow: '0 20px 60px rgba(0,0,0,0.6)',
+        }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Close Button */}
         <button
-          className="btn btn-primary btn-lg"
-          style={{ width: '100%' }}
-          onClick={handlePayment}
-          disabled={processing || !amount || Number(amount) <= 0}
+          onClick={onClose}
+          style={{
+            position: 'absolute', top: '1rem', right: '1rem',
+            background: 'none', border: 'none', color: 'var(--text-muted, #888)',
+            fontSize: '1.25rem', cursor: 'pointer',
+          }}
         >
-          {processing ? 'Processing...' : `Pay ${selectedCurrency.symbol}${Number(amount || 0).toLocaleString()} ${selectedCurrency.code}`}
+          ✕
         </button>
 
-        <p style={{ fontSize: '0.72rem', color: 'var(--text-muted)', textAlign: 'center', marginTop: '0.75rem' }}>
-          Powered by Razorpay Sandbox • Secure Payment Gateway
-        </p>
+        {/* Header */}
+        <div style={{ textAlign: 'center', marginBottom: '1.5rem' }}>
+          <div style={{ fontSize: '2.5rem', marginBottom: '0.5rem' }}>⟠</div>
+          <h2 style={{ fontSize: '1.4rem', fontWeight: 700, margin: '0 0 0.25rem 0' }}>
+            Get Monad Testnet Tokens
+          </h2>
+          <p style={{ color: 'var(--text-secondary, #a1a1aa)', fontSize: '0.85rem', margin: 0 }}>
+            Monad Test Tokens (MON) are the native platform currency for inference & subscriptions.
+          </p>
+        </div>
+
+        {/* Current Balance */}
+        <div style={{
+          background: 'rgba(167, 139, 250, 0.08)',
+          border: '1px solid rgba(167, 139, 250, 0.2)',
+          borderRadius: '10px', padding: '1rem', marginBottom: '1.5rem',
+          display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+        }}>
+          <div>
+            <div style={{ fontSize: '0.75rem', color: 'var(--text-muted, #888)' }}>Your Connected Balance</div>
+            <div style={{ fontSize: '1.2rem', fontWeight: 700, color: '#a78bfa' }}>
+              {Number(balance).toFixed(3)} MON
+            </div>
+          </div>
+          <span style={{
+            fontSize: '0.75rem', background: 'rgba(16, 185, 129, 0.15)',
+            color: '#10b981', border: '1px solid rgba(16, 185, 129, 0.3)',
+            padding: '0.2rem 0.6rem', borderRadius: '20px',
+          }}>
+            Chain ID: 10143
+          </span>
+        </div>
+
+        {/* Action 1: Claim Faucet */}
+        <button
+          onClick={handleClaim}
+          disabled={claiming}
+          style={{
+            width: '100%', padding: '0.85rem', borderRadius: '10px',
+            background: 'linear-gradient(135deg, #7c3aed, #6366f1)',
+            color: '#fff', border: 'none', fontWeight: 600, fontSize: '0.95rem',
+            cursor: claiming ? 'not-allowed' : 'pointer', marginBottom: '0.75rem',
+            boxShadow: '0 4px 14px rgba(124, 58, 237, 0.4)',
+          }}
+        >
+          {claiming ? 'Claiming Monad Tokens...' : '⚡ Instant Claim Faucet (10 MON)'}
+        </button>
+
+        {/* Action 2: Official Monad Faucet */}
+        <a
+          href="https://testnet.monad.xyz/"
+          target="_blank"
+          rel="noopener noreferrer"
+          style={{
+            display: 'block', textAlign: 'center', width: '100%', padding: '0.85rem',
+            borderRadius: '10px', background: 'rgba(255,255,255,0.05)',
+            color: '#c5c5d2', border: '1px solid var(--border-color, rgba(255,255,255,0.1))',
+            fontWeight: 500, fontSize: '0.9rem', textDecoration: 'none', marginBottom: '0.75rem',
+          }}
+        >
+          ↗ Open Official Monad Faucet
+        </a>
+
+        {/* Action 3: Add Monad Testnet */}
+        <button
+          onClick={handleAddMonadNetwork}
+          style={{
+            width: '100%', padding: '0.65rem', borderRadius: '8px',
+            background: 'none', color: 'var(--text-muted, #a1a1aa)',
+            border: '1px dashed rgba(255,255,255,0.15)', fontSize: '0.8rem',
+            cursor: 'pointer',
+          }}
+        >
+          + Add Monad Testnet (RPC 10143) to MetaMask
+        </button>
+
+        {/* Footer info */}
+        <div style={{
+          textAlign: 'center', marginTop: '1.25rem', fontSize: '0.75rem',
+          color: 'var(--text-muted, #71717a)',
+        }}>
+          Powered by Monad High-Throughput EVM Testnet • 10,000 TPS
+        </div>
       </div>
     </div>
   );

@@ -104,7 +104,7 @@ router.post('/chat/completions', authenticateApiKey, async (req, res) => {
     if (user.balance < costPerRequest) {
       return res.status(402).json({
         error: {
-          message: `Insufficient ECL balance. You have ${user.balance} ECL, need ${costPerRequest} ECL per request. Top up via the dashboard faucet.`,
+          message: `Insufficient MON balance. You have ${user.balance} MON, need ${costPerRequest} MON per request. Claim test tokens via the faucet.`,
           type: 'insufficient_funds'
         }
       });
@@ -202,6 +202,7 @@ router.post('/chat/completions', authenticateApiKey, async (req, res) => {
       eclipse: {
         cost: costPerRequest,
         remaining_balance: user.balance - costPerRequest,
+        currency: 'MON',
         ipfs_cid: responseCid,
         prompt_id: promptId,
       }
