@@ -13,10 +13,11 @@ The backend is an enterprise-grade REST and inference gateway written in **Node.
 - [Groq Multi-Key Failover Engine](#-groq-multi-key-failover-engine)
 - [API Endpoints Reference](#-api-endpoints-reference)
   - [1. Inference & OpenAI-Compatible Completions](#1-inference--openai-compatible-completions)
-  - [2. API Key Management](#2-api-key-management)
-  - [3. Models & Metadata](#3-models--metadata)
-  - [4. Subscriptions & Payments](#4-subscriptions--payments)
-  - [5. System Health & Configuration](#5-system-health--configuration)
+  - [2. User History & Audit Ledger](#2-user-history--audit-ledger)
+  - [3. Owner MON Cashout](#3-owner-mon-cashout)
+  - [4. API Key Management](#4-api-key-management)
+  - [5. Models & Metadata](#5-models--metadata)
+  - [6. System Health & Nodes](#6-system-health--nodes)
 - [Local Development & Testing](#-local-development--testing)
 - [Serverless / Vercel Execution](#-serverless--vercel-execution)
 
@@ -25,11 +26,11 @@ The backend is an enterprise-grade REST and inference gateway written in **Node.
 ## ✨ Core Features
 
 - **OpenAI-Compatible Chat Completions**: Standard `/api/v1/chat/completions` endpoint for plug-and-play integration with LangChain, LlamaIndex, cURL, and Python scripts.
-- **Groq LPU Multi-Key Pool**: Round-robin key rotation with instant failover to secondary keys if rate limits (HTTP 429) are encountered.
+- **Groq LPU Multi-Key Pool**: Round-robin key rotation with instant failover across 5 secondary keys if rate limits (HTTP 429) are encountered.
 - **Sliding-Window Rate Limiting**: Precision millisecond tracking in SQLite enforcing custom Requests Per Minute (15, 30, 60, 120, 300 RPM).
 - **Budget & Usage Caps**: Developer-defined lifetime request limits and native MON spend caps.
-- **Computer Vision OCR**: Integrated Jimp preprocessing and Tesseract OCR for parsing images passed in multimodal requests.
-- **Monad Testnet Service**: Ethers.js integration for reading native MON balances, querying smart contract state, and signing transactions.
+- **On-Chain Audit Ledger**: Full history tracking for purchases, executed prompts, token metrics, and Monad Explorer transaction links.
+- **Native MON Revenue Routing**: Direct integration with `PaymentManager.sol` for 85/10/5 revenue splits and 100% native MON creator withdrawals.
 
 ---
 
@@ -46,10 +47,8 @@ graph TD
     end
 
     subgraph InferenceRouter["Inference Router"]
-        InputType{"Text or Image?"}
-        VisionEngine["Jimp + Tesseract OCR"]
-        GroqPool["Groq Cloud LPU Pool (Keys 1-5)"]
-        OllamaLocal["Edge Worker (Ollama)"]
+        GroqPool["Groq Cloud LPU Pool (Keys 1-5)\n• Llama 3.3 70B Versatile\n• Llama 3.1 8B Instant\n• Mixtral 8x7B"]
+        OllamaLocal["Edge Worker (Ollama Local)"]
     end
 
     subgraph Persistence["Storage & Ledger"]
@@ -62,11 +61,8 @@ graph TD
     Auth --> RPMCheck
     RPMCheck --> SpendCheck
     SpendCheck -->|429 Exceeded| Client
-    SpendCheck -->|Allowed| InputType
+    SpendCheck -->|Allowed| GroqPool
 
-    InputType -->|Image payload| VisionEngine
-    VisionEngine --> GroqPool
-    InputType -->|Text prompt| GroqPool
     GroqPool -.->|Fallback| OllamaLocal
 
     GroqPool --> DB
@@ -94,23 +90,21 @@ The backend uses SQLite (`backend/synergy.db` locally, or `/tmp/synergy.db` on V
 | `is_active` | INTEGER | Key status (1 = active, 0 = revoked) |
 | `created_at` | TIMESTAMP | Creation timestamp |
 
-### `api_key_rate_limits` Table
+### `prompts` Table
 | Column | Type | Description |
 |--------|------|-------------|
-| `id` | INTEGER PRIMARY KEY | Autoincrement ID |
-| `key_id` | TEXT | Foreign key to `api_keys(id)` |
-| `timestamp_ms` | INTEGER | Request epoch timestamp in milliseconds |
-
-### `models` Table
-| Column | Type | Description |
-|--------|------|-------------|
-| `id` | TEXT PRIMARY KEY | Model identifier (e.g. `llama-3.3-70b`) |
-| `name` | TEXT | Display name |
-| `description` | TEXT | Model overview and capabilities |
-| `ipfs_cid` | TEXT | IPFS CID containing encrypted model weights |
-| `owner_address` | TEXT | Model creator wallet address |
-| `price_per_use` | REAL | API cost per call in MON |
-| `subscription_price` | REAL | Monthly subscription in MON |
+| `id` | TEXT PRIMARY KEY | Unique prompt execution ID |
+| `model_id` | TEXT | Foreign key to `models(id)` |
+| `user_address` | TEXT | Caller wallet address |
+| `session_id` | TEXT | Chat conversation session ID |
+| `prompt_text` | TEXT | Plaintext prompt for user history |
+| `encrypted_prompt_cid`| TEXT | Encrypted prompt IPFS CID |
+| `response_text` | TEXT | Plaintext response |
+| `encrypted_response_cid`| TEXT | Encrypted response IPFS CID |
+| `input_tokens` | INTEGER | Estimated/counted input tokens |
+| `output_tokens` | INTEGER | Counted completion tokens |
+| `duration_ms` | INTEGER | Execution time in milliseconds |
+| `tx_hash` | TEXT | Monad on-chain proof transaction hash |
 
 ---
 
@@ -118,113 +112,54 @@ The backend uses SQLite (`backend/synergy.db` locally, or `/tmp/synergy.db` on V
 
 Every request to `/api/v1/chat/completions` is audited in real-time:
 
-1. **Sliding-Window RPM**:
-   ```sql
-   -- Counts requests within the last 60,000 milliseconds
-   SELECT COUNT(*) as count FROM api_key_rate_limits 
-   WHERE key_id = ? AND timestamp_ms > ?;
-   ```
-2. **Response Headers**:
-   ```http
-   X-RateLimit-Limit: 60
-   X-RateLimit-Remaining: 59
-   X-RateLimit-Reset: 1726738920
-   ```
-3. **Rejection Response (HTTP 429)**:
-   ```json
-   {
-     "error": {
-       "message": "Rate limit exceeded. Your key is limited to 60 requests per minute.",
-       "type": "rate_limit_error",
-       "code": "rate_limit_exceeded"
-     }
-   }
-   ```
+1. **Sliding-Window Audit**: Counts requests timestamped within `[Now - 60000ms, Now]`.
+2. **Quota Check**: Verifies `total_requests < usage_limit_requests`.
+3. **Spend Check**: Verifies `total_spent_mon < usage_limit_mon`.
+
+If any limit is violated, the gateway returns HTTP `429 Too Many Requests` along with a `Retry-After` header.
 
 ---
 
 ## ⚡ Groq Multi-Key Failover Engine
 
-Configured in `backend/src/services/compute.js`:
-- Supports up to 5 concurrent Groq API keys (`GROQ_API_KEY`, `GROQ_API_KEY_1`... `GROQ_API_KEY_5`).
-- Keys rotate automatically per request to distribute load across Groq LPU quotas.
-- If any key receives an `HTTP 429` from Groq, the engine marks the key as exhausted and immediately retries the prompt on the next available key with 0 dropped requests.
+Configured via environment variables:
+- `GROQ_API_KEY`: Primary key
+- `GROQ_API_KEY_1` through `GROQ_API_KEY_4`: Secondary keys
+
+If an inference request receives an HTTP 429 or rate limit notice from Groq, the engine automatically selects the next key in the pool and immediately retries the request without failing client execution.
 
 ---
 
 ## 📡 API Endpoints Reference
 
-### 1. Inference & OpenAI-Compatible Completions
+### 1. Inference & Completions
+- `POST /api/execute`: Core prompt execution pipeline (subscription verification -> encryption -> IPFS -> compute -> ledger commit).
+- `POST /api/v1/chat/completions`: OpenAI-compatible completions endpoint.
 
-#### `POST /api/v1/chat/completions`
-Standard endpoint for developer integration.
+### 2. User History & Audit Ledger
+- `GET /api/user/purchases?wallet=0x...`: Returns user subscriptions with on-chain tx hashes.
+- `GET /api/user/prompts?wallet=0x...`: Returns prompt execution and token consumption ledger.
+- `GET /api/user/sessions?wallet=0x...`: Returns user chat sessions for historical conversation playback.
 
-**Headers**:
-```http
-Authorization: Bearer ecl_your_key_here
-Content-Type: application/json
-```
+### 3. Owner MON Cashout
+- `POST /api/user/cashout`: Executes model creator withdrawal strictly in native Monad tokens (`MON`).
 
-**Request Body**:
-```json
-{
-  "model": "llama-3.1-8b",
-  "messages": [
-    { "role": "user", "content": "Explain quantum computing in one sentence." }
-  ]
-}
-```
+### 4. API Key Management
+- `GET /api/keys?wallet=0x...`: Lists all API keys owned by wallet.
+- `POST /api/keys`: Generates new key with RPM and spend caps.
+- `DELETE /api/keys/:id`: Revokes an API key.
 
-**Multimodal Vision Request Body**:
-```json
-{
-  "model": "llama-3.3-70b",
-  "messages": [
-    {
-      "role": "user",
-      "content": [
-        { "type": "text", "text": "What is written in this screenshot?" },
-        { "type": "image_url", "image_url": { "url": "data:image/png;base64,..." } }
-      ]
-    }
-  ]
-}
-```
+### 5. Models & Metadata
+- `GET /api/models`: Returns verified marketplace models.
+- `GET /api/models/:id`: Returns detailed specs, encryption keys, and pricing.
+
+### 6. System Health & Nodes
+- `GET /api/health`: Node status, Monad RPC connectivity, and database health.
+- `GET /api/compute/nodes`: Active Groq and edge compute nodes.
 
 ---
 
-### 2. API Key Management
-
-- `GET /api/keys/:walletAddress`: List all API keys, usage statistics, and active caps.
-- `POST /api/keys/generate`: Generate a new API key with custom RPM and budget limits.
-- `POST /api/keys/revoke`: Revoke an active API key.
-
----
-
-### 3. Models & Metadata
-
-- `GET /api/models`: List all marketplace models.
-- `GET /api/models/:id`: Retrieve detailed metadata, pricing, and owner address.
-- `POST /api/models`: Register a new model with its IPFS CID.
-
----
-
-### 4. Subscriptions & Payments
-
-- `GET /api/subscriptions/check/:wallet/:modelId`: Check if a wallet has an active on-chain subscription.
-- `POST /api/subscriptions/sync`: Synchronize an on-chain `subscribe()` transaction into the SQLite read-cache.
-- `POST /api/wallet/faucet`: Instant testnet faucet claim (credits 10 MON).
-
----
-
-### 5. System Health & Configuration
-
-- `GET /api/health`: Comprehensive status check of Database, Blockchain RPC, IPFS, and Groq engine.
-- `GET /api/config`: Returns active Monad Testnet configuration and smart contract ABIs for the frontend.
-
----
-
-## 🧪 Local Development & Testing
+## 🛠️ Local Development & Testing
 
 ```bash
 cd backend
@@ -232,15 +167,12 @@ npm install
 npm run dev
 ```
 
-To run a quick health check:
+Run manual health check:
 ```bash
 curl http://localhost:3001/api/health
 ```
 
----
-
-## ☁️ Serverless / Vercel Execution
-
-In Vercel serverless environments (`process.env.VERCEL === '1'`):
-- The server does not invoke `app.listen()`. Instead, `api/index.js` exports the app handler.
-- The SQLite database automatically copies `backend/synergy.db` to `/tmp/synergy.db` (the only writable directory in Vercel Lambdas) upon initialization.
+Seed database:
+```bash
+curl http://localhost:3001/api/seed
+```

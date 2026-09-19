@@ -8,6 +8,7 @@ Built with **Solidity 0.8.20** and compiled/deployed using **Foundry**.
 
 ## 📑 Table of Contents
 
+- [Live Testnet Deployments](#-live-testnet-deployments)
 - [Contract Specifications](#-contract-specifications)
 - [On-Chain Revenue Split Flow](#-on-chain-revenue-split-flow)
 - [Contract Interfaces](#-contract-interfaces)
@@ -20,13 +21,26 @@ Built with **Solidity 0.8.20** and compiled/deployed using **Foundry**.
 
 ---
 
+## 🌐 Live Testnet Deployments
+
+The smart contracts are actively deployed on **Monad Testnet (`10143`)**:
+
+| Contract | Address | Explorer Link |
+|:---|:---|:---|
+| **`ModelRegistry`** | `0x2f02861ff42c0d04823dadd08326de0b07f57dfe` | [View on Monad Explorer](https://testnet.monadexplorer.com/address/0x2f02861ff42c0d04823dadd08326de0b07f57dfe) |
+| **`PaymentManager`** | `0xaa2499494b61d293a437c6bd31ca22b88d8aa9b2` | [View on Monad Explorer](https://testnet.monadexplorer.com/address/0xaa2499494b61d293a437c6bd31ca22b88d8aa9b2) |
+| **`PromptExecution`**| `0x70dcf4d82c8e1b989d2a7a3c2303fa48a348d6c1` | [View on Monad Explorer](https://testnet.monadexplorer.com/address/0x70dcf4d82c8e1b989d2a7a3c2303fa48a348d6c1) |
+| **Default Model Owner** | `0x75199c1aa8F21Eb583027BbB6763B7c79CC180D6` | [View on Monad Explorer](https://testnet.monadexplorer.com/address/0x75199c1aa8F21Eb583027BbB6763B7c79CC180D6) |
+
+---
+
 ## 📜 Contract Specifications
 
 | Contract | Purpose | State Variables / Key Features |
-|----------|---------|--------------------------------|
-| **`PaymentManager.sol`** | Native `MON` revenue router | Splits 85% to model owner, 10% to compute nodes, and 5% to platform treasury via native `msg.value` |
-| **`ModelRegistry.sol`** | Decentralized model catalog | Maps `modelId` to IPFS CIDs, owner addresses, and pricing metadata |
-| **`PromptExecution.sol`** | Verifiable execution ledger | Emits on-chain proofs linking encrypted prompt IPFS CIDs to model inference output CIDs |
+|:---|:---|:---|
+| **`PaymentManager.sol`** | Native `MON` revenue router | Splits 85% to model owner, 10% to compute nodes, and 5% to platform treasury via native `msg.value`. Provides 1-click cashout in native MON. |
+| **`ModelRegistry.sol`** | Decentralized model catalog | Maps `modelId` to IPFS CIDs, owner addresses, and single-digit MON pricing metadata. |
+| **`PromptExecution.sol`** | Verifiable execution ledger | Emits on-chain proofs linking encrypted prompt IPFS CIDs to model inference output CIDs and token metrics. |
 
 ---
 
@@ -42,14 +56,14 @@ graph TD
     Treasury["Platform Treasury\n(5% Native MON)"]
 
     User -->|Sends native MON via msg.value| Contract
-    Contract -->|Immediate low-gas call transfer| Owner
+    Contract -->|Allocated to ownerEarnings mapping| Owner
     Contract -->|Allocated to nodeRewards mapping| ComputeNodes
     Contract -->|Retained for treasury maintenance| Treasury
 ```
 
 ### Key Highlights:
 1. **Zero ERC-20 Approvals Needed**: Because payments are in native `MON`, users only sign a single transaction to subscribe or execute models.
-2. **Atomic Payouts**: 85% of payment is transferred directly to the model creator's wallet within the same block transaction.
+2. **Pure Native MON Cashouts**: Model creators withdraw 100% of their accumulated revenue in native `MON` directly to their wallet via `cashoutOwnerEarnings()`.
 
 ---
 
@@ -57,7 +71,7 @@ graph TD
 
 ### 1. `PaymentManager.sol`
 
-Handles pay-per-use and monthly subscription payments in native `MON`:
+Handles subscriptions, pay-per-use payments, and creator cashouts in native `MON`:
 
 ```solidity
 // Direct subscription with 85/10/5 native MON split
@@ -74,6 +88,9 @@ function payPerUse(
     address _modelOwner,
     address _computeNode
 ) external payable;
+
+// Model creators withdraw accumulated MON earnings
+function cashoutOwnerEarnings() external;
 
 // Compute nodes claim accumulated rewards
 function claimNodeRewards() external;
@@ -123,7 +140,7 @@ function submitResponse(
 Foundry is configured in `foundry.toml` with Monad's high-speed RPC:
 
 | Parameter | Value |
-|-----------|-------|
+|:---|:---|
 | **Network** | Monad Testnet |
 | **Chain ID** | `10143` (`0x279f`) |
 | **RPC URL** | `https://testnet-rpc.monad.xyz/` |
@@ -165,9 +182,9 @@ forge script script/Deploy.s.sol \
 The script prints the deployed addresses:
 ```plaintext
 === Deployment on Monad Complete ===
-Model Registry:   0x...
-Payment Manager:  0x...
-Prompt Execution: 0x...
+Model Registry:   0x2f02861ff42c0d04823dadd08326de0b07f57dfe
+Payment Manager:  0xaa2499494b61d293a437c6bd31ca22b88d8aa9b2
+Prompt Execution: 0x70dcf4d82c8e1b989d2a7a3c2303fa48a348d6c1
 Deployer:         0x...
 ```
 Update these values in [.env](file:///Users/arpitdoshi/monadhacks/.env) under:
