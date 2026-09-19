@@ -1,0 +1,15 @@
+[
+  "function createPrompt(string _promptId, string _modelId, string _encryptedPromptCID, uint256 _inputTokens)",
+  "function submitResponse(string _promptId, address _computeNode, string _responseCID, uint256 _outputTokens)",
+  "function failPrompt(string _promptId, string _reason)",
+  "function getPrompt(string _promptId) view returns (tuple(string promptId, string modelId, address user, address computeNode, string encryptedPromptCID, string responseCID, uint8 status, uint256 inputTokens, uint256 outputTokens, uint256 createdAt, uint256 completedAt))",
+  "function getUserPrompts(address _user) view returns (string[])",
+  "function registerNode(address _node)",
+  "function removeNode(address _node)",
+  "function getRegisteredNodes() view returns (address[])",
+  "function totalPrompts() view returns (uint256)",
+  "function registeredNodes(address) view returns (bool)",
+  "event PromptCreated(string indexed promptId, string indexed modelId, address indexed user, string encryptedPromptCID)",
+  "event ResponseSubmitted(string indexed promptId, address indexed computeNode, string responseCID, uint256 outputTokens)",
+  "event PromptFailed(string indexed promptId, string reason)"
+]

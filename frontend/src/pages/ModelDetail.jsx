@@ -1,0 +1,223 @@
+import { useState, useEffect, useContext, useRef } from 'react';
+import { useParams, Link } from 'react-router-dom';
+import { motion } from 'framer-motion';
+import toast from 'react-hot-toast';
+import { AppContext } from '../App.jsx';
+
+export default function ModelDetail() {
+  const { id } = useParams();
+  const { wallet, balance, API_URL, connectWallet, refreshBalance } = useContext(AppContext);
+  const [model, setModel] = useState(null);
+  const [messages, setMessages] = useState([]);
+  const [prompt, setPrompt] = useState('');
+  const [sending, setSending] = useState(false);
+  const messagesEndRef = useRef(null);
+
+  useEffect(() => {
+    fetchModel();
+  }, [id]);
+
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages]);
+
+  const fetchModel = async () => {
+    try {
+      const res = await fetch(`${API_URL}/api/models/${id}`);
+      const data = await res.json();
+      setModel(data.model);
+    } catch (err) {
+      console.error('Failed to fetch model:', err);
+    }
+  };
+
+  const sendPrompt = async () => {
+    if (!prompt.trim() || sending) return;
+
+    if (!wallet) {
+      toast.error('Please connect your wallet first');
+      return;
+    }
+
+    if (balance < (model?.price_per_use || 1)) {
+      toast.error('Insufficient SYN balance. Use the faucet!');
+      return;
+    }
+
+    const userMsg = { role: 'user', content: prompt, timestamp: new Date() };
+    setMessages(prev => [...prev, userMsg]);
+    setPrompt('');
+    setSending(true);
+
+    try {
+      const res = await fetch(`${API_URL}/api/execute`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          modelId: id,
+          prompt: prompt,
+          userAddress: wallet,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (data.success) {
+        const assistantMsg = {
+          role: 'assistant',
+          content: data.response,
+          timestamp: new Date(),
+          meta: data.metadata,
+        };
+        setMessages(prev => [...prev, assistantMsg]);
+        refreshBalance();
+        toast.success(`Inference complete! Cost: ${model.price_per_use} SYN`);
+      } else {
+        toast.error(data.error || 'Execution failed');
+        setMessages(prev => [...prev, {
+          role: 'assistant',
+          content: `Error: ${data.error}`,
+          timestamp: new Date(),
+          error: true,
+        }]);
+      }
+    } catch (err) {
+      toast.error('Network error: ' + err.message);
+    }
+
+    setSending(false);
+  };
+
+  const handleKeyDown = (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      sendPrompt();
+    }
+  };
+
+  if (!model) {
+    return (
+      <div className="model-detail">
+        <div className="empty-state">
+          <div className="loading-spinner" style={{ margin: '0 auto' }}></div>
+          <p style={{ marginTop: '1rem' }}>Loading model...</p>
+        </div>
+      </div>
+    );
+  }
+
+  const getModelIcon = (name) => {
+    if (name?.toLowerCase().includes('gemma')) return '💎';
+    if (name?.toLowerCase().includes('llama')) return '🦙';
+    return '🤖';
+  };
+
+  return (
+    <div className="model-detail">
+      <Link to="/marketplace" className="back-link">← Back to Marketplace</Link>
+
+      <motion.div
+        className="model-detail-header"
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+      >
+        <div className="model-avatar" style={{ width: 64, height: 64, fontSize: '2rem' }}>
+          {getModelIcon(model.name)}
+        </div>
+        <div className="model-detail-info">
+          <h1>{model.name}</h1>
+          <p className="description">{model.description}</p>
+
+          <div className="detail-stats">
+            <div className="detail-stat">
+              <div className="label">Price</div>
+              <div className="value" style={{ color: '#a78bfa' }}>{model.price_per_use} SYN</div>
+            </div>
+            <div className="detail-stat">
+              <div className="label">Rate Limit</div>
+              <div className="value">{model.rate_limit}/min</div>
+            </div>
+            <div className="detail-stat">
+              <div className="label">Total Uses</div>
+              <div className="value">{model.total_uses}</div>
+            </div>
+            <div className="detail-stat">
+              <div className="label">Encryption</div>
+              <div className="value" style={{ color: '#00e676' }}>AES-256</div>
+            </div>
+            <div className="detail-stat">
+              <div className="label">Storage</div>
+              <div className="value">IPFS</div>
+            </div>
+          </div>
+        </div>
+      </motion.div>
+
+      <motion.div
+        className="prompt-container"
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.2 }}
+      >
+        <div className="prompt-header">
+          <h3>💬 Run Inference</h3>
+          <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+            {wallet && <span className="balance-badge">💎 {balance.toFixed(1)} SYN</span>}
+            <span className="status-badge completed">● Live</span>
+          </div>
+        </div>
+
+        <div className="prompt-messages">
+          {messages.length === 0 && (
+            <div className="empty-state" style={{ padding: '2rem' }}>
+              <div className="icon">💬</div>
+              <h3>Start a conversation</h3>
+              <p>Enter a prompt below to run inference on {model.name}</p>
+            </div>
+          )}
+
+          {messages.map((msg, i) => (
+            <div key={i} className={`message ${msg.role}`} style={msg.error ? { borderColor: 'var(--error)' } : {}}>
+              {msg.content}
+              {msg.meta && (
+                <div className="meta">
+                  <span>📥 {msg.meta.inputTokens} tokens</span>
+                  <span>📤 {msg.meta.outputTokens} tokens</span>
+                  <span>⏱️ {(msg.meta.duration / 1000).toFixed(1)}s</span>
+                  {msg.meta.promptCid && <span>📌 IPFS</span>}
+                  {msg.meta.txHash && <span>⛓️ On-chain</span>}
+                </div>
+              )}
+            </div>
+          ))}
+
+          {sending && (
+            <div className="message assistant">
+              <span className="loading-dots">Thinking</span>
+            </div>
+          )}
+
+          <div ref={messagesEndRef} />
+        </div>
+
+        <div className="prompt-input">
+          <textarea
+            value={prompt}
+            onChange={(e) => setPrompt(e.target.value)}
+            onKeyDown={handleKeyDown}
+            placeholder={wallet ? `Ask ${model.name} anything...` : 'Connect wallet to start...'}
+            disabled={!wallet || sending}
+            rows={1}
+          />
+          <button
+            className="send-btn"
+            onClick={sendPrompt}
+            disabled={!wallet || !prompt.trim() || sending}
+          >
+            {sending ? '⏳' : '↑'}
+          </button>
+        </div>
+      </motion.div>
+    </div>
+  );
+}

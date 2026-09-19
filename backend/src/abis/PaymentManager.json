@@ -1,0 +1,16 @@
+[
+  "function payPerUse(string _modelId, address _user, address _modelOwner, address _computeNode, uint256 _amount)",
+  "function subscribe(string _modelId, address _modelOwner, uint256 _quota, uint256 _price, uint256 _duration)",
+  "function deductFromSubscription(address _user, string _modelId, uint256 _tokensUsed) returns (bool)",
+  "function claimRewards()",
+  "function hasActiveSubscription(address _user, string _modelId) view returns (bool)",
+  "function getSubscription(address _user, string _modelId) view returns (tuple(string modelId, uint256 tokenQuota, uint256 tokensUsed, uint256 expiresAt, bool isActive))",
+  "function nodeRewards(address) view returns (uint256)",
+  "function totalRevenue() view returns (uint256)",
+  "function MODEL_OWNER_SHARE() view returns (uint256)",
+  "function COMPUTE_NODE_SHARE() view returns (uint256)",
+  "function PLATFORM_SHARE() view returns (uint256)",
+  "event PaymentProcessed(address indexed user, string indexed modelId, uint256 amount, string paymentType)",
+  "event SubscriptionCreated(address indexed user, string indexed modelId, uint256 quota, uint256 expiresAt)",
+  "event NodeRewarded(address indexed node, uint256 amount)"
+]

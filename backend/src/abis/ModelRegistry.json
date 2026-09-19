@@ -1,0 +1,16 @@
+[
+  "function registerModel(string _modelId, string _name, string _description, string _ipfsCID, string _category, uint256 _pricePerUse, uint256 _subscriptionPrice, uint256 _rateLimit)",
+  "function getModel(string _modelId) view returns (tuple(string modelId, string name, string ipfsCID, address owner, uint256 pricePerUse, uint256 rateLimit, bool isActive, uint256 createdAt, uint256 totalUses))",
+  "function getModelMeta(string _modelId) view returns (tuple(string description, string category, uint256 subscriptionPrice, uint256 rating, uint256 ratingCount))",
+  "function getAllModels() view returns (tuple(string modelId, string name, string ipfsCID, address owner, uint256 pricePerUse, uint256 rateLimit, bool isActive, uint256 createdAt, uint256 totalUses)[])",
+  "function updateModel(string _modelId, string _ipfsCID, uint256 _pricePerUse, uint256 _subscriptionPrice)",
+  "function setRateLimit(string _modelId, uint256 _rateLimit)",
+  "function incrementUses(string _modelId)",
+  "function rateModel(string _modelId, uint256 _rating)",
+  "function deactivateModel(string _modelId)",
+  "function getModelsByOwner(address _owner) view returns (string[])",
+  "function getModelCount() view returns (uint256)",
+  "function modelExists(string) view returns (bool)",
+  "event ModelRegistered(string modelId, string name, address indexed owner, string ipfsCID, uint256 pricePerUse)",
+  "event ModelUpdated(string modelId, string ipfsCID, uint256 pricePerUse)"
+]
