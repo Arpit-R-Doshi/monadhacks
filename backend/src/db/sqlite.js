@@ -193,6 +193,21 @@ export function initDB() {
     console.error('[DB] api_keys columns migration failed:', err.message);
   }
 
+  // Add Monad on-chain cashout columns to withdrawals table if not present
+  try {
+    const wdCols = db.pragma('table_info(withdrawals)');
+    if (!wdCols.some(c => c.name === 'tx_hash')) {
+      db.exec(`ALTER TABLE withdrawals ADD COLUMN tx_hash TEXT;`);
+      console.log('[DB] Added tx_hash column to withdrawals table.');
+    }
+    if (!wdCols.some(c => c.name === 'recipient_address')) {
+      db.exec(`ALTER TABLE withdrawals ADD COLUMN recipient_address TEXT;`);
+      console.log('[DB] Added recipient_address column to withdrawals table.');
+    }
+  } catch (err) {
+    console.error('[DB] withdrawals migration failed:', err.message);
+  }
+
   return db;
 }
 
@@ -514,19 +529,78 @@ export function getModelsSharedWithMe(walletAddress) {
   `).all(walletAddress.toLowerCase());
 }
 
-// ── Withdrawals ──
-export function createWithdrawal({ id, walletAddress, amount, currency, localAmount, method, payoutInfo }) {
+// ── Withdrawals & Owner Earnings ──
+export function createWithdrawal({ id, walletAddress, recipientAddress, amount, currency = 'MON', localAmount, method = 'monad_testnet', status = 'completed', payoutInfo, txHash }) {
   db.prepare(`
-    INSERT INTO withdrawals (id, wallet_address, amount, currency, local_amount, method, status, payout_info)
-    VALUES (?, ?, ?, ?, ?, ?, 'pending', ?)
-  `).run(id, walletAddress.toLowerCase(), amount, currency, localAmount, method, payoutInfo || '');
+    INSERT INTO withdrawals (id, wallet_address, recipient_address, amount, currency, local_amount, method, status, payout_info, tx_hash, processed_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+  `).run(
+    id,
+    walletAddress.toLowerCase(),
+    (recipientAddress || walletAddress).toLowerCase(),
+    amount,
+    currency,
+    localAmount || amount,
+    method,
+    status,
+    payoutInfo || (recipientAddress || walletAddress).toLowerCase(),
+    txHash || ''
+  );
 }
 
 export function getWithdrawals(walletAddress) {
   return db.prepare('SELECT * FROM withdrawals WHERE wallet_address = ? ORDER BY created_at DESC').all(walletAddress.toLowerCase());
 }
 
-export function updateWithdrawalStatus(id, status) {
-  db.prepare('UPDATE withdrawals SET status = ?, processed_at = CURRENT_TIMESTAMP WHERE id = ?').run(status, id);
+export function updateWithdrawalStatus(id, status, txHash = null) {
+  if (txHash) {
+    db.prepare('UPDATE withdrawals SET status = ?, tx_hash = ?, processed_at = CURRENT_TIMESTAMP WHERE id = ?').run(status, txHash, id);
+  } else {
+    db.prepare('UPDATE withdrawals SET status = ?, processed_at = CURRENT_TIMESTAMP WHERE id = ?').run(status, id);
+  }
+}
+
+/**
+ * Get accurate earnings summary for a model owner in MON
+ */
+export function getOwnerEarningsSummary(walletAddress) {
+  const addr = walletAddress.toLowerCase();
+
+  // 1. Model usage statistics
+  const modelStats = db.prepare(`
+    SELECT 
+      COUNT(*) as model_count,
+      COALESCE(SUM(total_uses), 0) as total_uses,
+      COALESCE(SUM(total_uses * price_per_use), 0) as model_usage_earnings
+    FROM models 
+    WHERE LOWER(owner_address) = ?
+  `).get(addr);
+
+  // 2. Total non-failed withdrawals
+  const withdrawalStats = db.prepare(`
+    SELECT COALESCE(SUM(amount), 0) as total_withdrawn
+    FROM withdrawals
+    WHERE LOWER(wallet_address) = ? AND status != 'failed'
+  `).get(addr);
+
+  const user = getOrCreateUser(addr);
+  const totalEarnings = modelStats?.model_usage_earnings || 0;
+  const totalWithdrawn = withdrawalStats?.total_withdrawn || 0;
+
+  // Available earnings that can be cashed out
+  const availableEarnings = Math.max(0, totalEarnings - totalWithdrawn);
+  const withdrawableAmount = Math.max(availableEarnings, user?.balance || 0);
+
+  return {
+    walletAddress: addr,
+    totalEarnings: Number(totalEarnings.toFixed(4)),
+    totalWithdrawn: Number(totalWithdrawn.toFixed(4)),
+    availableEarnings: Number(availableEarnings.toFixed(4)),
+    userBalance: Number((user?.balance || 0).toFixed(4)),
+    withdrawableAmount: Number(withdrawableAmount.toFixed(4)),
+    totalUses: modelStats?.total_uses || 0,
+    modelCount: modelStats?.model_count || 0,
+    currency: 'MON',
+  };
 }
 

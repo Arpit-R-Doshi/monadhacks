@@ -129,7 +129,39 @@ export async function claimFaucet(address) {
     const receipt = await tx.wait();
     return { hash: receipt.hash, simulated: false };
   } catch (err) {
-    return { error: err.message, simulated: true };
+    console.warn('[Blockchain] claimFaucet error:', err.message);
+    return { hash: '0x' + 'monadfauceterror'.padEnd(64, '0'), simulated: true, error: err.message };
+  }
+}
+
+/**
+ * Transfer native MON directly on Monad Testnet for owner cashouts
+ */
+export async function transferMonadNative(recipientAddress, amount) {
+  if (!signer) {
+    console.warn('[Blockchain] Signer not initialized, returning simulated cashout tx');
+    const fakeHash = '0x' + Array.from({ length: 64 }, () => Math.floor(Math.random() * 16).toString(16)).join('');
+    return { hash: fakeHash, simulated: true };
+  }
+
+  try {
+    const valueInWei = ethers.parseEther(amount.toString());
+    console.log(`[Blockchain] Initiating cashout of ${amount} MON to ${recipientAddress} from signer ${signer.address}...`);
+    const tx = await signer.sendTransaction({
+      to: recipientAddress,
+      value: valueInWei,
+    });
+    console.log(`[Blockchain] Cashout tx submitted on Monad Testnet: ${tx.hash}`);
+    const receipt = await tx.wait();
+    console.log(`[Blockchain] Cashout tx confirmed in block ${receipt.blockNumber}: ${receipt.hash}`);
+    return {
+      hash: receipt.hash,
+      blockNumber: receipt.blockNumber,
+      simulated: false,
+    };
+  } catch (err) {
+    console.error('[Blockchain] Cashout on-chain transfer error:', err);
+    throw err;
   }
 }
 

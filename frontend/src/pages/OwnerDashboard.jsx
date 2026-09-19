@@ -19,6 +19,7 @@ export default function OwnerDashboard() {
   const [transferModal, setTransferModal] = useState(null);
   const [transferAddress, setTransferAddress] = useState('');
   const [showCashout, setShowCashout] = useState(false);
+  const [ownerEarnings, setOwnerEarnings] = useState(null);
 
   useEffect(() => {
     if (wallet) {
@@ -26,6 +27,7 @@ export default function OwnerDashboard() {
       fetchHealth();
       fetchSubStats();
       fetchSharedModels();
+      fetchOwnerEarnings();
     } else {
       setLoading(false);
     }
@@ -73,6 +75,19 @@ export default function OwnerDashboard() {
       }
     } catch (err) {
       console.error('Sub stats error:', err);
+    }
+  };
+
+  const fetchOwnerEarnings = async () => {
+    if (!wallet) return;
+    try {
+      const res = await fetch(`${API_URL}/api/payments/owner-earnings/${wallet}`);
+      const data = await res.json();
+      if (data.success) {
+        setOwnerEarnings(data.earnings);
+      }
+    } catch (err) {
+      console.error('Owner earnings fetch error:', err);
     }
   };
 
@@ -148,14 +163,17 @@ export default function OwnerDashboard() {
         </motion.div>
 
         <motion.div className="card stat-card" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
-          <div className="stat-value">{totalEarnings.toFixed(1)}</div>
-          <div className="stat-label">Total Earnings (MON)</div>
+          <div className="stat-value">{ownerEarnings ? ownerEarnings.withdrawableAmount.toFixed(1) : totalEarnings.toFixed(1)}</div>
+          <div className="stat-label">Withdrawable Earnings (MON)</div>
+          <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: '0.2rem' }}>
+            Total Earned: {ownerEarnings ? ownerEarnings.totalEarnings.toFixed(1) : totalEarnings.toFixed(1)} MON
+          </div>
           <button
             className="btn btn-primary btn-sm"
             style={{ marginTop: '0.75rem', width: '100%', fontSize: '1.1rem' }}
             onClick={() => setShowCashout(true)}
           >
-            Cashout
+            ⚡ Cashout MON
           </button>
         </motion.div>
 
@@ -422,7 +440,14 @@ export default function OwnerDashboard() {
         </div>
       )}
 
-      <CashoutModal isOpen={showCashout} onClose={() => setShowCashout(false)} />
+      <CashoutModal
+        isOpen={showCashout}
+        onClose={() => setShowCashout(false)}
+        onSuccess={() => {
+          fetchMyModels();
+          fetchOwnerEarnings();
+        }}
+      />
     </div>
   );
 }
