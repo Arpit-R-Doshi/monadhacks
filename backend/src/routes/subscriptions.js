@@ -51,6 +51,19 @@ router.post('/sync', async (req, res) => {
       tokensAllocated: 50000,
     });
 
+    // Deduct the subscription price from the user's platform balance
+    // and credit the model owner (85% owner / 15% platform, matching on-chain split)
+    const user = getOrCreateUser(userAddress);
+    const subPrice = Number(model.subscription_price) || 0;
+    if (subPrice > 0 && user.balance >= subPrice) {
+      updateUserBalance(userAddress, user.balance - subPrice);
+
+      // Credit 85% to model owner
+      const ownerShare = Math.floor(subPrice * 0.85);
+      const owner = getOrCreateUser(model.owner_address);
+      updateUserBalance(model.owner_address, owner.balance + ownerShare);
+    }
+
     res.json({
       success: true,
       subscriptionId: subId,
