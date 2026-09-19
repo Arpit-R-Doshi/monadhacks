@@ -140,11 +140,13 @@ app.get('/api/seed', async (req, res) => {
   res.json({ message: 'ECLIPSE Groq models seeded', models: demoModels.map(m => ({ id: m.id, name: m.name })) });
 });
 
-// Start server
-app.listen(PORT, () => {
-  console.log(`✅ ECLIPSE Backend running on http://localhost:${PORT}`);
-  console.log(`📊 Health check: http://localhost:${PORT}/api/health`);
-  console.log(`🌱 Seed models:  http://localhost:${PORT}/api/seed\n`);
-});
+// Start server (standalone node process; on Vercel, the app is exported directly)
+if (process.env.VERCEL !== '1' && !process.env.AWS_LAMBDA_FUNCTION_NAME) {
+  app.listen(PORT, () => {
+    console.log(`✅ ECLIPSE Backend running on http://localhost:${PORT}`);
+    console.log(`📊 Health check: http://localhost:${PORT}/api/health`);
+    console.log(`🌱 Seed models:  http://localhost:${PORT}/api/seed\n`);
+  });
+}
 
 export default app;

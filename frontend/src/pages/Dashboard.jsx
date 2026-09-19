@@ -18,6 +18,9 @@ export default function Dashboard() {
   const [models, setModels] = useState([]);
   const [showBuyModal, setShowBuyModal] = useState(false);
   const [computeNodes, setComputeNodes] = useState([]);
+  const [newKeyRpm, setNewKeyRpm] = useState(60);
+  const [newKeyMaxReqs, setNewKeyMaxReqs] = useState('');
+  const [newKeyMaxMon, setNewKeyMaxMon] = useState('');
 
   useEffect(() => {
     if (wallet) {
@@ -57,13 +60,21 @@ export default function Dashboard() {
       const res = await fetch(`${API_URL}/api/keys/generate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userAddress: wallet, name: newKeyName || 'Default' }),
+        body: JSON.stringify({
+          userAddress: wallet,
+          name: newKeyName || 'Default',
+          rateLimitRpm: Number(newKeyRpm) || 60,
+          usageLimitRequests: Number(newKeyMaxReqs) || 0,
+          usageLimitMon: Number(newKeyMaxMon) || 0,
+        }),
       });
       const data = await res.json();
       if (data.success) {
         toast.success('API key generated! Copy it now — it won\'t be shown again.');
         setJustCreatedKey(data.key.apiKey);
         setNewKeyName('');
+        setNewKeyMaxReqs('');
+        setNewKeyMaxMon('');
         fetchApiKeys();
       } else {
         toast.error(data.error);
@@ -372,27 +383,85 @@ console.log("Remaining balance:", data.eclipse.remaining_balance, "MON");`,
           </div>
         )}
 
-        {/* Generate Key */}
-        <div style={{ display: 'flex', gap: '0.75rem', marginBottom: '1.5rem', flexWrap: 'wrap' }}>
-          <input
-            type="text"
-            placeholder="Key name (e.g. production, dev)"
-            value={newKeyName}
-            onChange={(e) => setNewKeyName(e.target.value)}
-            style={{
-              flex: 1, minWidth: '200px', padding: '0.6rem 1rem',
-              background: 'var(--bg-highlight)', border: '1px solid var(--border-color)',
-              borderRadius: '8px', color: 'var(--text-primary)', fontSize: '0.9rem',
-            }}
-          />
-          <button
-            onClick={generateKey}
-            disabled={generatingKey}
-            className="btn-primary"
-            style={{ padding: '0.6rem 1.5rem', fontSize: '0.85rem', borderRadius: '8px', cursor: 'pointer' }}
-          >
-            {generatingKey ? 'Generating...' : '+ Generate Key'}
-          </button>
+        {/* Generate Key & Limit Controls */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '0.75rem', marginBottom: '1.5rem', background: 'rgba(255,255,255,0.02)', padding: '1rem', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.06)' }}>
+          <div>
+            <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'block', marginBottom: '0.25rem' }}>Key Name</label>
+            <input
+              type="text"
+              placeholder="e.g. Production, Dev"
+              value={newKeyName}
+              onChange={(e) => setNewKeyName(e.target.value)}
+              style={{
+                width: '100%', padding: '0.55rem 0.8rem',
+                background: 'var(--bg-highlight)', border: '1px solid var(--border-color)',
+                borderRadius: '6px', color: 'var(--text-primary)', fontSize: '0.85rem',
+              }}
+            />
+          </div>
+
+          <div>
+            <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'block', marginBottom: '0.25rem' }}>Rate Limit (RPM)</label>
+            <select
+              value={newKeyRpm}
+              onChange={(e) => setNewKeyRpm(Number(e.target.value))}
+              style={{
+                width: '100%', padding: '0.55rem 0.8rem',
+                background: 'var(--bg-highlight)', border: '1px solid var(--border-color)',
+                borderRadius: '6px', color: 'var(--text-primary)', fontSize: '0.85rem',
+              }}
+            >
+              <option value={15}>15 req / min</option>
+              <option value={30}>30 req / min</option>
+              <option value={60}>60 req / min (Standard)</option>
+              <option value={120}>120 req / min (High)</option>
+              <option value={300}>300 req / min (Turbo)</option>
+            </select>
+          </div>
+
+          <div>
+            <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'block', marginBottom: '0.25rem' }}>Request Cap (0 = Unlimited)</label>
+            <input
+              type="number"
+              placeholder="e.g. 500"
+              value={newKeyMaxReqs}
+              onChange={(e) => setNewKeyMaxReqs(e.target.value)}
+              min="0"
+              style={{
+                width: '100%', padding: '0.55rem 0.8rem',
+                background: 'var(--bg-highlight)', border: '1px solid var(--border-color)',
+                borderRadius: '6px', color: 'var(--text-primary)', fontSize: '0.85rem',
+              }}
+            />
+          </div>
+
+          <div>
+            <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'block', marginBottom: '0.25rem' }}>Budget Cap (MON, 0 = Unlimited)</label>
+            <input
+              type="number"
+              placeholder="e.g. 10.0"
+              value={newKeyMaxMon}
+              onChange={(e) => setNewKeyMaxMon(e.target.value)}
+              min="0"
+              step="0.5"
+              style={{
+                width: '100%', padding: '0.55rem 0.8rem',
+                background: 'var(--bg-highlight)', border: '1px solid var(--border-color)',
+                borderRadius: '6px', color: 'var(--text-primary)', fontSize: '0.85rem',
+              }}
+            />
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'flex-end' }}>
+            <button
+              onClick={generateKey}
+              disabled={generatingKey}
+              className="btn-primary"
+              style={{ width: '100%', padding: '0.6rem 1.2rem', fontSize: '0.85rem', borderRadius: '6px', cursor: 'pointer', height: '36px' }}
+            >
+              {generatingKey ? 'Generating...' : '+ Generate Key'}
+            </button>
+          </div>
         </div>
 
         {/* Just Created Key Banner */}
@@ -431,9 +500,10 @@ console.log("Remaining balance:", data.eclipse.remaining_balance, "MON");`,
               <thead>
                 <tr>
                   <th>Name</th>
-                  <th>Key</th>
-                  <th>Requests</th>
-                  <th>Tokens Used</th>
+                  <th>Key Prefix</th>
+                  <th>Rate Limit</th>
+                  <th>Requests / Cap</th>
+                  <th>Spend / Budget</th>
                   <th>Status</th>
                   <th>Action</th>
                 </tr>
@@ -443,8 +513,27 @@ console.log("Remaining balance:", data.eclipse.remaining_balance, "MON");`,
                   <tr key={k.id}>
                     <td style={{ fontWeight: 600 }}>{k.name}</td>
                     <td><code style={{ fontSize: '0.8rem', color: 'var(--accent-primary)' }}>{k.key_prefix}</code></td>
-                    <td>{k.total_requests}</td>
-                    <td>{k.total_tokens_used.toLocaleString()}</td>
+                    <td>
+                      <span style={{ fontSize: '0.75rem', padding: '0.15rem 0.5rem', borderRadius: '4px', background: 'rgba(167,139,250,0.1)', color: '#a78bfa', border: '1px solid rgba(167,139,250,0.2)' }}>
+                        {k.rate_limit_rpm || 60} RPM
+                      </span>
+                    </td>
+                    <td>
+                      {k.total_requests}
+                      {k.usage_limit_requests > 0 ? (
+                        <span style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}> / {k.usage_limit_requests}</span>
+                      ) : (
+                        <span style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}> / ∞</span>
+                      )}
+                    </td>
+                    <td>
+                      {Number(k.total_spent_mon || 0).toFixed(2)} MON
+                      {k.usage_limit_mon > 0 ? (
+                        <span style={{ color: '#a78bfa', fontSize: '0.75rem' }}> / {Number(k.usage_limit_mon).toFixed(1)} MON</span>
+                      ) : (
+                        <span style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}> / ∞</span>
+                      )}
+                    </td>
                     <td>
                       <span className={`status-badge ${k.is_active ? 'completed' : 'failed'}`}>
                         {k.is_active ? '● Active' : '● Revoked'}

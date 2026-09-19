@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { v4 as uuidv4 } from 'uuid';
 import { createHash, randomBytes } from 'crypto';
-import { createApiKey, getApiKeysByUser, revokeApiKey } from '../db/sqlite.js';
+import { createApiKey, getApiKeysByUser, revokeApiKey, updateApiKeyLimits } from '../db/sqlite.js';
 
 const router = Router();
 
@@ -11,11 +11,11 @@ function hashKey(key) {
 
 /**
  * POST /api/keys/generate
- * Generate a new API key for the authenticated wallet
+ * Generate a new API key with optional rate limit and usage limits
  */
 router.post('/generate', (req, res) => {
   try {
-    const { userAddress, name } = req.body;
+    const { userAddress, name, rateLimitRpm, usageLimitRequests, usageLimitMon } = req.body;
 
     if (!userAddress) {
       return res.status(400).json({ error: 'Wallet address required' });
@@ -40,6 +40,9 @@ router.post('/generate', (req, res) => {
       keyPrefix,
       userAddress,
       name: name || 'Default',
+      rateLimitRpm: rateLimitRpm || 60,
+      usageLimitRequests: usageLimitRequests || 0,
+      usageLimitMon: usageLimitMon || 0,
     });
 
     // Return full key only once — it won't be shown again
@@ -50,6 +53,9 @@ router.post('/generate', (req, res) => {
         apiKey: rawKey,
         prefix: keyPrefix,
         name: name || 'Default',
+        rateLimitRpm: rateLimitRpm || 60,
+        usageLimitRequests: usageLimitRequests || 0,
+        usageLimitMon: usageLimitMon || 0,
       },
       message: '⚠️ Save this API key now. It will not be shown again.',
     });
@@ -68,6 +74,29 @@ router.get('/list/:address', (req, res) => {
   try {
     const keys = getApiKeysByUser(req.params.address);
     res.json({ success: true, keys });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+/**
+ * PUT /api/keys/limits/:keyId
+ * Update rate limit and usage limits on an API key
+ */
+router.put('/limits/:keyId', (req, res) => {
+  try {
+    const { userAddress, rateLimitRpm, usageLimitRequests, usageLimitMon } = req.body;
+    if (!userAddress) {
+      return res.status(400).json({ error: 'Wallet address required' });
+    }
+
+    updateApiKeyLimits(req.params.keyId, userAddress, {
+      rateLimitRpm,
+      usageLimitRequests,
+      usageLimitMon,
+    });
+
+    res.json({ success: true, message: 'API key limits updated successfully' });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

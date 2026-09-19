@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { v4 as uuidv4 } from 'uuid';
 import { createHash } from 'crypto';
-import { getApiKeyByHash, updateApiKeyUsage, getModelById, getModels, getOrCreateUser, updateUserBalance, incrementModelUses, savePrompt, updatePromptResponse } from '../db/sqlite.js';
+import { getApiKeyByHash, updateApiKeyUsage, checkApiKeyRateLimit, checkApiKeyUsageLimits, getModelById, getModels, getOrCreateUser, updateUserBalance, incrementModelUses, savePrompt, updatePromptResponse } from '../db/sqlite.js';
 import { runInference } from '../services/compute.js';
 import { encrypt } from '../services/encryption.js';
 import { uploadToIPFS } from '../services/ipfs.js';
@@ -70,12 +70,29 @@ router.get('/models', authenticateApiKey, (req, res) => {
 
 /**
  * POST /api/v1/chat/completions
- * OpenAI-compatible chat completions endpoint
+ * OpenAI-compatible chat completions endpoint with rate limiting & usage limits
  */
 router.post('/chat/completions', authenticateApiKey, async (req, res) => {
   const startTime = Date.now();
 
   try {
+    // 1. Rate Limiting Check
+    const rateCheck = checkApiKeyRateLimit(req.apiKey.id, req.apiKey.rate_limit_rpm || 60);
+    res.setHeader('X-RateLimit-Limit', rateCheck.limit);
+    res.setHeader('X-RateLimit-Remaining', Math.max(0, rateCheck.remaining));
+    res.setHeader('X-RateLimit-Reset', rateCheck.resetInSeconds);
+
+    if (!rateCheck.allowed) {
+      res.setHeader('Retry-After', rateCheck.resetInSeconds);
+      return res.status(429).json({
+        error: {
+          message: `Rate limit exceeded. This key is limited to ${rateCheck.limit} requests per minute. Try again in ${rateCheck.resetInSeconds} seconds.`,
+          type: 'rate_limit_exceeded',
+          code: 429,
+        }
+      });
+    }
+
     const { model: modelId, messages, max_tokens, temperature, stream } = req.body;
 
     if (!modelId) {
@@ -98,8 +115,22 @@ router.post('/chat/completions', authenticateApiKey, async (req, res) => {
       });
     }
 
-    // Check user balance (pay-as-you-go: price_per_use ECL per request)
+    // Cost calculation
     const costPerRequest = modelRecord.price_per_use ?? 1;
+
+    // 2. Usage / Budget Limits Check
+    const usageCheck = checkApiKeyUsageLimits(req.apiKey, costPerRequest);
+    if (!usageCheck.allowed) {
+      return res.status(429).json({
+        error: {
+          message: usageCheck.reason,
+          type: usageCheck.type,
+          code: 'usage_limit_exceeded',
+        }
+      });
+    }
+
+    // Check user balance (pay-as-you-go: price_per_use MON per request)
     const user = getOrCreateUser(req.userAddress);
     if (user.balance < costPerRequest) {
       return res.status(402).json({
@@ -152,7 +183,7 @@ router.post('/chat/completions', authenticateApiKey, async (req, res) => {
     // Deduct balance
     updateUserBalance(req.userAddress, -costPerRequest);
     incrementModelUses(modelId);
-    updateApiKeyUsage(req.apiKey.id, totalTokens);
+    updateApiKeyUsage(req.apiKey.id, totalTokens, costPerRequest);
 
     // Save prompt record
     const promptId = uuidv4();

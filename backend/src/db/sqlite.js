@@ -2,15 +2,37 @@ import Database from 'better-sqlite3';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 
+import fs from 'fs';
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-const DB_PATH = join(__dirname, '..', '..', 'synergy.db');
+// In Vercel serverless environment, use /tmp which is writable
+let DB_PATH;
+if (process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME) {
+  DB_PATH = join('/tmp', 'synergy.db');
+  const sourceDb = join(__dirname, '..', '..', 'synergy.db');
+  if (!fs.existsSync(DB_PATH) && fs.existsSync(sourceDb)) {
+    try {
+      fs.copyFileSync(sourceDb, DB_PATH);
+      console.log('[DB] Seeded database copied to /tmp/synergy.db for Vercel');
+    } catch (e) {
+      console.warn('[DB] Could not copy seed DB to /tmp:', e.message);
+    }
+  }
+} else {
+  DB_PATH = process.env.DB_PATH || join(__dirname, '..', '..', 'synergy.db');
+}
+
 let db;
 
 export function initDB() {
   db = new Database(DB_PATH);
-  db.pragma('journal_mode = WAL');
+  try {
+    db.pragma('journal_mode = WAL');
+  } catch (e) {
+    db.pragma('journal_mode = DELETE');
+  }
 
   db.exec(`
     CREATE TABLE IF NOT EXISTS models (
@@ -84,8 +106,18 @@ export function initDB() {
       is_active INTEGER DEFAULT 1,
       total_requests INTEGER DEFAULT 0,
       total_tokens_used INTEGER DEFAULT 0,
+      rate_limit_rpm INTEGER DEFAULT 60,
+      usage_limit_requests INTEGER DEFAULT 0,
+      usage_limit_mon REAL DEFAULT 0,
+      total_spent_mon REAL DEFAULT 0,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       last_used_at DATETIME
+    );
+
+    CREATE TABLE IF NOT EXISTS api_key_rate_limits (
+      key_id TEXT PRIMARY KEY,
+      request_count INTEGER DEFAULT 1,
+      window_start DATETIME DEFAULT CURRENT_TIMESTAMP
     );
 
     CREATE TABLE IF NOT EXISTS model_co_owners (
@@ -140,6 +172,25 @@ export function initDB() {
     }
   } catch (err) {
     console.error('[DB] session_id migration failed:', err.message);
+  }
+
+  // Add rate limiting and usage limits columns to api_keys table if not present
+  try {
+    const keyCols = db.pragma('table_info(api_keys)');
+    if (!keyCols.some(c => c.name === 'rate_limit_rpm')) {
+      db.exec(`ALTER TABLE api_keys ADD COLUMN rate_limit_rpm INTEGER DEFAULT 60;`);
+    }
+    if (!keyCols.some(c => c.name === 'usage_limit_requests')) {
+      db.exec(`ALTER TABLE api_keys ADD COLUMN usage_limit_requests INTEGER DEFAULT 0;`);
+    }
+    if (!keyCols.some(c => c.name === 'usage_limit_mon')) {
+      db.exec(`ALTER TABLE api_keys ADD COLUMN usage_limit_mon REAL DEFAULT 0;`);
+    }
+    if (!keyCols.some(c => c.name === 'total_spent_mon')) {
+      db.exec(`ALTER TABLE api_keys ADD COLUMN total_spent_mon REAL DEFAULT 0;`);
+    }
+  } catch (err) {
+    console.error('[DB] api_keys columns migration failed:', err.message);
   }
 
   return db;
@@ -292,12 +343,24 @@ export function updateSubscriptionTokens(id, tokensUsed) {
 }
 
 // API Key operations
-export function createApiKey({ id, keyHash, keyPrefix, userAddress, name }) {
+export function createApiKey({ id, keyHash, keyPrefix, userAddress, name, rateLimitRpm, usageLimitRequests, usageLimitMon }) {
   const stmt = db.prepare(`
-    INSERT INTO api_keys (id, key_hash, key_prefix, user_address, name)
-    VALUES (?, ?, ?, ?, ?)
+    INSERT INTO api_keys (
+      id, key_hash, key_prefix, user_address, name,
+      rate_limit_rpm, usage_limit_requests, usage_limit_mon, total_spent_mon
+    )
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0)
   `);
-  return stmt.run(id, keyHash, keyPrefix, userAddress, name || 'Default');
+  return stmt.run(
+    id,
+    keyHash,
+    keyPrefix,
+    userAddress,
+    name || 'Default',
+    Number(rateLimitRpm) || 60,
+    Number(usageLimitRequests) || 0,
+    Number(usageLimitMon) || 0
+  );
 }
 
 export function getApiKeyByHash(keyHash) {
@@ -308,7 +371,9 @@ export function getApiKeyByHash(keyHash) {
 
 export function getApiKeysByUser(userAddress) {
   return db.prepare(`
-    SELECT id, key_prefix, name, is_active, total_requests, total_tokens_used, created_at, last_used_at
+    SELECT id, key_prefix, name, is_active, total_requests, total_tokens_used,
+           rate_limit_rpm, usage_limit_requests, usage_limit_mon, total_spent_mon,
+           created_at, last_used_at
     FROM api_keys WHERE user_address = ?
     ORDER BY created_at DESC
   `).all(userAddress);
@@ -320,11 +385,91 @@ export function revokeApiKey(keyId, userAddress) {
   `).run(keyId, userAddress);
 }
 
-export function updateApiKeyUsage(keyId, tokensUsed) {
+export function updateApiKeyUsage(keyId, tokensUsed, costMon = 0) {
   db.prepare(`
-    UPDATE api_keys SET total_requests = total_requests + 1, total_tokens_used = total_tokens_used + ?, last_used_at = CURRENT_TIMESTAMP
+    UPDATE api_keys 
+    SET total_requests = total_requests + 1,
+        total_tokens_used = total_tokens_used + ?,
+        total_spent_mon = total_spent_mon + ?,
+        last_used_at = CURRENT_TIMESTAMP
     WHERE id = ?
-  `).run(tokensUsed, keyId);
+  `).run(tokensUsed, costMon, keyId);
+}
+
+export function updateApiKeyLimits(keyId, userAddress, { rateLimitRpm, usageLimitRequests, usageLimitMon }) {
+  return db.prepare(`
+    UPDATE api_keys 
+    SET rate_limit_rpm = ?, usage_limit_requests = ?, usage_limit_mon = ?
+    WHERE id = ? AND user_address = ?
+  `).run(
+    Number(rateLimitRpm) || 60,
+    Number(usageLimitRequests) || 0,
+    Number(usageLimitMon) || 0,
+    keyId,
+    userAddress
+  );
+}
+
+export function checkApiKeyRateLimit(keyId, limitRpm = 60) {
+  const limit = Number(limitRpm) || 60;
+  const now = Date.now();
+  const row = db.prepare('SELECT * FROM api_key_rate_limits WHERE key_id = ?').get(keyId);
+
+  if (!row) {
+    db.prepare('INSERT OR REPLACE INTO api_key_rate_limits (key_id, request_count, window_start) VALUES (?, 1, ?)').run(keyId, now);
+    return { allowed: true, remaining: limit - 1, limit, resetInSeconds: 60 };
+  }
+
+  // Support both epoch integer or UTC date string
+  let windowStart = typeof row.window_start === 'number'
+    ? row.window_start
+    : (new Date(String(row.window_start).endsWith('Z') ? row.window_start : row.window_start + 'Z').getTime());
+
+  if (isNaN(windowStart)) windowStart = now;
+
+  const elapsedMs = now - windowStart;
+  const elapsedSec = elapsedMs / 1000;
+
+  if (elapsedSec >= 60) {
+    db.prepare('UPDATE api_key_rate_limits SET request_count = 1, window_start = ? WHERE key_id = ?').run(now, keyId);
+    return { allowed: true, remaining: limit - 1, limit, resetInSeconds: 60 };
+  }
+
+  if (row.request_count >= limit) {
+    return { allowed: false, remaining: 0, limit, resetInSeconds: Math.ceil(60 - elapsedSec) };
+  }
+
+  db.prepare('UPDATE api_key_rate_limits SET request_count = request_count + 1 WHERE key_id = ?').run(keyId);
+  return { allowed: true, remaining: limit - (row.request_count + 1), limit, resetInSeconds: Math.ceil(60 - elapsedSec) };
+}
+
+export function checkApiKeyUsageLimits(keyRecord, costMon = 0) {
+  if (!keyRecord) return { allowed: true };
+
+  // 1. Check max requests cap
+  if (keyRecord.usage_limit_requests && keyRecord.usage_limit_requests > 0) {
+    if (keyRecord.total_requests >= keyRecord.usage_limit_requests) {
+      return {
+        allowed: false,
+        reason: `API key has reached its request limit of ${keyRecord.usage_limit_requests} requests.`,
+        type: 'request_limit_exceeded',
+      };
+    }
+  }
+
+  // 2. Check MON budget spend cap
+  if (keyRecord.usage_limit_mon && keyRecord.usage_limit_mon > 0) {
+    const projectedSpend = (keyRecord.total_spent_mon || 0) + costMon;
+    if (projectedSpend > keyRecord.usage_limit_mon) {
+      return {
+        allowed: false,
+        reason: `API key has reached its spend budget limit of ${keyRecord.usage_limit_mon} MON (total spent: ${(keyRecord.total_spent_mon || 0).toFixed(2)} MON).`,
+        type: 'budget_limit_exceeded',
+      };
+    }
+  }
+
+  return { allowed: true };
 }
 
 // ─── CO-OWNERSHIP OPERATIONS ────────────────────────────────
