@@ -250,11 +250,36 @@ export default function ModelDetail() {
               {msg.content}
               {msg.meta && (
                 <div className="meta">
-                  <span>📥 {msg.meta.inputTokens} tokens</span>
-                  <span>📤 {msg.meta.outputTokens} tokens</span>
-                  <span>⏱️ {(msg.meta.duration / 1000).toFixed(1)}s</span>
-                  {msg.meta.promptCid && <span>📌 IPFS</span>}
-                  {msg.meta.txHash && <span>⛓️ On-chain</span>}
+                  {msg.meta.inputTokens > 0 && <span>📥 {msg.meta.inputTokens} in</span>}
+                  {msg.meta.outputTokens > 0 && <span>📤 {msg.meta.outputTokens} out</span>}
+                  {msg.meta.duration > 0 && <span>⏱️ {(msg.meta.duration / 1000).toFixed(1)}s</span>}
+                  {msg.meta.promptCid && (
+                    <a
+                      href={`https://gateway.pinata.cloud/ipfs/${msg.meta.promptCid}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      title="View encrypted prompt on IPFS"
+                      style={{ color: '#a78bfa', textDecoration: 'none' }}
+                    >
+                      📌 IPFS
+                    </a>
+                  )}
+                  {msg.meta.txHash && !msg.meta.simulated && (
+                    <a
+                      href={`https://amoy.polygonscan.com/tx/${msg.meta.txHash}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      title="View transaction on Polygon Amoy Explorer"
+                      style={{ color: '#34d399', textDecoration: 'none' }}
+                    >
+                      ⛓️ Polygonscan
+                    </a>
+                  )}
+                  {msg.meta.txHash && msg.meta.simulated && (
+                    <span title="Simulated on-chain (testnet tx omitted)" style={{ color: 'var(--text-muted)' }}>
+                      🔵 Simulated
+                    </span>
+                  )}
                 </div>
               )}
             </div>

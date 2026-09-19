@@ -651,10 +651,21 @@ input, textarea, select {
 
 .message .meta {
   display: flex;
+  flex-wrap: wrap;
   gap: 0.75rem;
   margin-top: 0.5rem;
   font-size: 0.7rem;
+  opacity: 0.85;
+}
+
+.message .meta a {
+  text-decoration: none;
+  transition: opacity 0.15s;
+}
+
+.message .meta a:hover {
   opacity: 0.7;
+  text-decoration: underline;
 }
 
 .prompt-input {

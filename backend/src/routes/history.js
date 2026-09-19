@@ -42,6 +42,8 @@ router.get('/:userAddress', (req, res) => {
         outputTokens: p.output_tokens,
         durationMs: p.duration_ms,
         txHash: p.tx_hash,
+        promptCid: p.encrypted_prompt_cid,
+        responseCid: p.response_cid,
         createdAt: p.created_at,
         completedAt: p.completed_at,
       });
@@ -94,6 +96,8 @@ router.get('/:userAddress/:modelId', (req, res) => {
             outputTokens: p.output_tokens,
             duration: p.duration_ms,
             txHash: p.tx_hash,
+            promptCid: p.encrypted_prompt_cid,
+            responseCid: p.response_cid,
           },
         });
       }

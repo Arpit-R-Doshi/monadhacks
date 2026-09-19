@@ -192,14 +192,26 @@ export default function ChatHistory() {
                                 {msg.inputTokens > 0 && <span>📥 {msg.inputTokens} in</span>}
                                 {msg.outputTokens > 0 && <span>📤 {msg.outputTokens} out</span>}
                                 {msg.durationMs > 0 && <span>⏱️ {(msg.durationMs / 1000).toFixed(1)}s</span>}
-                                {msg.txHash && (
+                                {msg.promptCid && (
                                   <a
-                                    href={`https://www.oklink.com/amoy/tx/${msg.txHash}`}
+                                    href={`https://gateway.pinata.cloud/ipfs/${msg.promptCid}`}
                                     target="_blank"
                                     rel="noreferrer"
-                                    style={{ color: 'var(--accent-secondary)' }}
+                                    style={{ color: '#a78bfa', textDecoration: 'none' }}
+                                    title="View encrypted prompt on IPFS"
                                   >
-                                    ⛓️ View on chain
+                                    📌 IPFS
+                                  </a>
+                                )}
+                                {msg.txHash && (
+                                  <a
+                                    href={`https://amoy.polygonscan.com/tx/${msg.txHash}`}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    style={{ color: '#34d399', textDecoration: 'none' }}
+                                    title="View transaction on Polygon Amoy Explorer"
+                                  >
+                                    ⛓️ Polygonscan
                                   </a>
                                 )}
                               </div>
