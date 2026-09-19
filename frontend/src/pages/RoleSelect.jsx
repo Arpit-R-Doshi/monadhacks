@@ -26,7 +26,7 @@ export default function RoleSelect() {
       >
         <div className="role-header">
           <div className="role-logo">⚡</div>
-          <h1>Welcome to <span className="gradient-text">Eclipse.AI</span></h1>
+          <h1>Welcome to <span className="gradient-text">ECLIPSE.AI</span></h1>
           <p>Choose how you want to use the decentralized AI marketplace</p>
         </div>
 

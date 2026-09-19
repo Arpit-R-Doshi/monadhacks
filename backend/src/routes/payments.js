@@ -94,7 +94,7 @@ router.post('/create-order', async (req, res) => {
       notes: {
         walletAddress,
         eclTokens: eclTokens.toString(),
-        platform: 'Eclipse.AI',
+        platform: 'ECLIPSE.AI',
       },
     });
 

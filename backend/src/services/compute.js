@@ -10,7 +10,7 @@ export const COMPUTE_NODES = [
     location: 'Lab Machine 1',
     url: process.env.OLLAMA_URL || 'http://10.103.143.101:11434',
     specs: 'Intel i7 / 16GB RAM / RTX 3060',
-    icon: '🖥️',
+    icon: '',
   },
   {
     id: 'node-beta',
@@ -18,7 +18,7 @@ export const COMPUTE_NODES = [
     location: 'Lab Machine 2',
     url: process.env.OLLAMA_URL_2 || 'http://10.103.143.102:11434',
     specs: 'AMD Ryzen 9 / 32GB RAM / RTX 4070',
-    icon: '⚡',
+    icon: '',
   },
   {
     id: 'node-gamma',
@@ -26,7 +26,7 @@ export const COMPUTE_NODES = [
     location: 'Lab Machine 3',
     url: process.env.OLLAMA_URL_3 || 'http://10.103.143.103:11434',
     specs: 'Apple M2 Pro / 16GB RAM',
-    icon: '🍎',
+    icon: '',
   },
 ];
 

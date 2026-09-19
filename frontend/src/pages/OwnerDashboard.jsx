@@ -103,57 +103,17 @@ export default function OwnerDashboard() {
       <div className="owner-header">
         <div>
           <h1>Owner Dashboard</h1>
-          <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginTop: '0.25rem' }}>
+          <p style={{ color: 'var(--text-secondary)', fontFamily: `'Bebas Neue', display, sans-serif`, fontSize: '1.2rem', letterSpacing: '0.06em', marginTop: '0.25rem' }}>
             Manage your AI models and track earnings
           </p>
         </div>
-        <Link to="/owner/upload" className="btn btn-primary">🚀 Upload New Model</Link>
-      </div>
-
-      {/* Stats Grid */}
-      <div className="dashboard-grid">
-        <motion.div className="card stat-card" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
-          <div className="stat-icon" style={{ background: 'rgba(108,43,217,0.15)', color: '#a78bfa' }}>🤖</div>
-          <div className="stat-value">{models.length}</div>
-          <div className="stat-label">Your Models</div>
-        </motion.div>
-        
-        <motion.div className="card stat-card" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
-          <div className="stat-icon" style={{ background: 'rgba(33,150,243,0.15)', color: '#64b5f6' }}>👥</div>
-          <div className="stat-value">{totalSubs}</div>
-          <div className="stat-label">Active Subscribers</div>
-        </motion.div>
-
-        <motion.div className="card stat-card" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
-          <div className="stat-icon" style={{ background: 'rgba(16,185,129,0.12)', color: '#059669' }}>💰</div>
-          <div className="stat-value">{totalEarnings.toFixed(1)}</div>
-          <div className="stat-label">Total Earnings (ECL)</div>
-          <button
-            className="btn btn-primary btn-sm"
-            style={{ marginTop: '0.75rem', width: '100%' }}
-            onClick={() => setShowCashout(true)}
-          >
-            💸 Cashout
-          </button>
-        </motion.div>
-
-        <motion.div className="card stat-card" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
-          <div className="stat-icon" style={{ background: 'rgba(33,150,243,0.15)', color: '#64b5f6' }}>📊</div>
-          <div className="stat-value">{totalUses}</div>
-          <div className="stat-label">Total Inferences</div>
-        </motion.div>
-
-        <motion.div className="card stat-card" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
-          <div className="stat-icon" style={{ background: 'rgba(255,171,64,0.15)', color: '#ffab40' }}>⚡</div>
-          <div className="stat-value">{health?.services?.compute?.healthy ? 'Online' : 'Sim'}</div>
-          <div className="stat-label">Compute Node</div>
-        </motion.div>
+        <Link to="/owner/upload" className="btn btn-primary" style={{ fontSize: '1.25rem', padding: '0.6rem 1.6rem' }}>Upload New Model</Link>
       </div>
 
       {/* Platform Status */}
       {health && (
-        <motion.div className="card" style={{ marginBottom: '2rem', padding: '1.5rem' }} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.4 }}>
-          <h3 style={{ marginBottom: '1rem', fontSize: '1rem' }}>🏥 Platform Status</h3>
+        <motion.div className="card" style={{ marginBottom: '2rem', padding: '1.5rem', width: 'max-content' }} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.1 }}>
+          <h3 style={{ marginBottom: '1rem', fontSize: '1.2rem' }}>Platform Status</h3>
           <div style={{ display: 'flex', gap: '2rem', flexWrap: 'wrap' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
               <span className={`status-badge ${health.services?.database?.connected ? 'completed' : 'failed'}`}>●</span>
@@ -175,9 +135,44 @@ export default function OwnerDashboard() {
         </motion.div>
       )}
 
+      {/* Stats Grid */}
+      <div className="dashboard-grid">
+        <motion.div className="card stat-card" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
+          <div className="stat-value">{models.length}</div>
+          <div className="stat-label">Your Models</div>
+        </motion.div>
+        
+        <motion.div className="card stat-card" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
+          <div className="stat-value">{totalSubs}</div>
+          <div className="stat-label">Active Subscribers</div>
+        </motion.div>
+
+        <motion.div className="card stat-card" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
+          <div className="stat-value">{totalEarnings.toFixed(1)}</div>
+          <div className="stat-label">Total Earnings (ECL)</div>
+          <button
+            className="btn btn-primary btn-sm"
+            style={{ marginTop: '0.75rem', width: '100%', fontSize: '1.1rem' }}
+            onClick={() => setShowCashout(true)}
+          >
+            Cashout
+          </button>
+        </motion.div>
+
+        <motion.div className="card stat-card" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
+          <div className="stat-value">{totalUses}</div>
+          <div className="stat-label">Total Inferences</div>
+        </motion.div>
+
+        <motion.div className="card stat-card" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
+          <div className="stat-value">{health?.services?.compute?.healthy ? 'Online' : 'Sim'}</div>
+          <div className="stat-label">Compute Node</div>
+        </motion.div>
+      </div>
+
       {/* Your Models */}
       <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.5 }}>
-        <h3 style={{ marginBottom: '1rem', fontSize: '1.1rem', fontWeight: 700 }}>Your Models</h3>
+        <h3 style={{ marginBottom: '1rem', fontSize: '2rem', fontWeight: 800, letterSpacing: '0.06em' }}>Your Models</h3>
 
         {loading ? (
           <div className="empty-state" style={{ padding: '3rem' }}>
@@ -215,15 +210,12 @@ export default function OwnerDashboard() {
 
                   <div className="model-stats">
                     <div className="model-stat-item">
-                      <span>👥</span>
                       <span className="value">{subStats.subscribers.find(s => s.model_id === model.id)?.count || 0}</span> subs
                     </div>
                     <div className="model-stat-item">
-                      <span>🔥</span>
                       <span className="value">{subStats.tokens.find(s => s.model_id === model.id)?.total_burnt || 0}</span> burnt
                     </div>
                     <div className="model-stat-item">
-                      <span>⚡</span>
                       <span className="value">{model.rate_limit}</span> req/min
                     </div>
                   </div>
@@ -245,7 +237,7 @@ export default function OwnerDashboard() {
                         }}
                         style={{
                           background: 'rgba(33,150,243,0.1)', color: '#64b5f6', border: '1px solid rgba(33,150,243,0.3)',
-                          padding: '0.35rem 0.65rem', borderRadius: '6px', cursor: 'pointer', fontSize: '0.75rem', fontWeight: 'bold'
+                          padding: '0.55rem 1.1rem', borderRadius: '8px', cursor: 'pointer', fontSize: '1rem', fontWeight: 'bold'
                         }}
                       >
                         Share
@@ -254,7 +246,7 @@ export default function OwnerDashboard() {
                         onClick={() => { setTransferModal(model); setTransferAddress(''); }}
                         style={{
                           background: 'rgba(255,171,64,0.1)', color: '#ffab40', border: '1px solid rgba(255,171,64,0.3)',
-                          padding: '0.35rem 0.65rem', borderRadius: '6px', cursor: 'pointer', fontSize: '0.75rem', fontWeight: 'bold'
+                          padding: '0.55rem 1.1rem', borderRadius: '8px', cursor: 'pointer', fontSize: '1rem', fontWeight: 'bold'
                         }}
                       >
                         Transfer
@@ -286,7 +278,7 @@ export default function OwnerDashboard() {
                         }}
                         style={{
                           background: 'rgba(244,67,54,0.1)', color: '#ef5350', border: '1px solid rgba(244,67,54,0.3)',
-                          padding: '0.35rem 0.65rem', borderRadius: '6px', cursor: 'pointer', fontSize: '0.75rem', fontWeight: 'bold'
+                          padding: '0.55rem 1.1rem', borderRadius: '8px', cursor: 'pointer', fontSize: '1rem', fontWeight: 'bold'
                         }}
                       >
                         Remove

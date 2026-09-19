@@ -9,7 +9,7 @@ import {
   RainbowKitProvider,
   darkTheme
 } from '@rainbow-me/rainbowkit';
-import { WagmiProvider } from 'wagmi';
+import { WagmiProvider, http } from 'wagmi';
 import { polygonAmoy } from 'wagmi/chains';
 import {
   QueryClientProvider,
@@ -17,9 +17,12 @@ import {
 } from '@tanstack/react-query';
 
 const config = getDefaultConfig({
-  appName: 'Eclipse.AI',
-  projectId: import.meta.env.VITE_WC_PROJECT_ID || '48bdac974bd0ba94eb090d8a0c283f5d', 
+  appName: 'ECLIPSE.AI',
+  projectId: '922886dc28d4f15371c6aa9bcb5c21cc',
   chains: [polygonAmoy],
+  transports: {
+    [polygonAmoy.id]: http('https://rpc-amoy.polygon.technology/'),
+  },
 });
 
 const queryClient = new QueryClient();

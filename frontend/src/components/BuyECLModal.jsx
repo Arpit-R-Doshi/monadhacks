@@ -79,7 +79,7 @@ export default function BuyECLModal({ isOpen, onClose }) {
         key: orderData.key,
         amount: orderData.order.amount,
         currency: orderData.order.currency,
-        name: 'Eclipse.AI',
+        name: 'ECLIPSE.AI',
         description: `Purchase ${orderData.order.eclTokens} ECL Tokens`,
         order_id: orderData.order.id,
         handler: async function (response) {
@@ -110,7 +110,7 @@ export default function BuyECLModal({ isOpen, onClose }) {
           }
         },
         prefill: {
-          name: 'Eclipse.AI User',
+          name: 'ECLIPSE.AI User',
         },
         theme: {
           color: '#7c3aed',

@@ -12,6 +12,12 @@ const upload = multer({
   limits: { fileSize: 50 * 1024 * 1024 }, // 50MB limit for demo purposes
 });
 
+// Helper: parse a number, treating NaN as missing so that 0 is preserved as a valid value
+function numOrDefault(val, fallback) {
+  const n = Number(val);
+  return Number.isNaN(n) ? fallback : n;
+}
+
 /**
  * POST /api/models/upload
  * Register a new AI model on the platform (Supports Custom Weights)
@@ -57,7 +63,7 @@ router.post('/upload', upload.fields([{ name: 'weightsFile' }, { name: 'configFi
       await registerModelOnChain(
         modelId, name, description || '', cid,
         category || 'text-generation',
-        Number(pricePerUse) || 1, Number(subscriptionPrice) || 10, Number(rateLimit) || 10
+        numOrDefault(pricePerUse, 1), numOrDefault(subscriptionPrice, 10), numOrDefault(rateLimit, 10)
       );
       console.log(`[Models] ✅ Registered ${modelId} on-chain.`);
     } catch (chainErr) {
@@ -73,9 +79,9 @@ router.post('/upload', upload.fields([{ name: 'weightsFile' }, { name: 'configFi
       ipfsCid: cid,
       ownerAddress,
       ollamaModel: ollamaModel || '',
-      pricePerUse: Number(pricePerUse) || 1,
-      subscriptionPrice: Number(subscriptionPrice) || 10,
-      rateLimit: Number(rateLimit) || 10,
+      pricePerUse: numOrDefault(pricePerUse, 1),
+      subscriptionPrice: numOrDefault(subscriptionPrice, 10),
+      rateLimit: numOrDefault(rateLimit, 10),
       encryptionKey,
       computeNodeUrl: computeNodeUrl || null,
       inputModality: inputModality || 'text',

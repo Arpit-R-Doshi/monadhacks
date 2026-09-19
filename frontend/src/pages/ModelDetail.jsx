@@ -2,14 +2,15 @@ import { useState, useEffect, useContext, useRef } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import toast from 'react-hot-toast';
-import { useWriteContract, usePublicClient } from 'wagmi';
+import { usePublicClient, useWalletClient } from 'wagmi';
 import { parseEther, parseGwei, parseAbi } from 'viem';
+import { polygonAmoy } from 'wagmi/chains';
 import { AppContext } from '../App.jsx';
 
 export default function ModelDetail() {
   const { id } = useParams();
   const { wallet, balance, API_URL, refreshBalance, appConfig } = useContext(AppContext);
-  const { writeContractAsync } = useWriteContract();
+  const { data: walletClient } = useWalletClient();
   const publicClient = usePublicClient();
   const [model, setModel] = useState(null);
   const [messages, setMessages] = useState([]);
@@ -73,6 +74,11 @@ export default function ModelDetail() {
   };
 
   const checkSubscription = async () => {
+    // Free models: skip subscription paywall entirely
+    if (model && Number(model.subscription_price) === 0) {
+      setSubscribed(true);
+      return;
+    }
     try {
       const res = await fetch(`${API_URL}/api/subscriptions/check/${wallet}/${id}`);
       const data = await res.json();
@@ -96,6 +102,12 @@ export default function ModelDetail() {
     
     setSubscribing(true);
     try {
+      if (!walletClient) {
+        toast.error('Wallet not ready. Please reconnect.');
+        setSubscribing(false);
+        return;
+      }
+
       const price = model.subscription_price.toString();
       const priceWei = parseEther(price);
       const tokenAbi = parseAbi(appConfig.abis.SYN3RGYToken);
@@ -122,11 +134,13 @@ export default function ModelDetail() {
       
       // Step 1: Approve ECL tokens for PaymentManager
       toast.loading('Step 1/3: Approve ECL tokens in MetaMask...', { id: 'sub-tx' });
-      const approveHash = await writeContractAsync({
+      const approveHash = await walletClient.writeContract({
         address: appConfig.addresses.SYN3RGYToken,
         abi: tokenAbi,
         functionName: 'approve',
         args: [appConfig.addresses.PaymentManager, priceWei],
+        chain: polygonAmoy,
+        account: wallet,
         ...gasOverrides,
       });
       
@@ -148,11 +162,13 @@ export default function ModelDetail() {
       
       // Step 2: Subscribe on PaymentManager
       toast.loading('Step 2/3: Confirm subscription in MetaMask...', { id: 'sub-tx' });
-      const subHash = await writeContractAsync({
+      const subHash = await walletClient.writeContract({
         address: appConfig.addresses.PaymentManager,
         abi: paymentAbi,
         functionName: 'subscribe',
         args: [id, model.owner_address, 50000n, priceWei, 2592000n],
+        chain: polygonAmoy,
+        account: wallet,
         ...gasOverrides,
       });
       
@@ -217,8 +233,8 @@ export default function ModelDetail() {
       return;
     }
 
-    if (balance < (model?.price_per_use || 1)) {
-      toast.error('Insufficient ECL balance. Buy more tokens!');
+    if (!subscribed && !(model && Number(model.subscription_price) === 0)) {
+      toast.error('You need an active subscription to chat. Subscribe first!');
       return;
     }
 
@@ -335,7 +351,7 @@ export default function ModelDetail() {
               <div className="value" style={{ color: '#a78bfa' }}>{model.subscription_price} ECL</div>
             </div>
             <div className="detail-stat">
-              <div className="label">Pay Per Use</div>
+              <div className="label">API Price</div>
               <div className="value" style={{ color: '#a78bfa' }}>{model.price_per_use} ECL</div>
             </div>
             <div className="detail-stat">
@@ -512,7 +528,7 @@ export default function ModelDetail() {
           <div ref={messagesEndRef} />
         </div>
 
-        {(!wallet || subscribed) ? (
+        {(!wallet || subscribed || Number(model.subscription_price) === 0) ? (
           <div className="prompt-input-container" style={{ position: 'relative' }}>
             {imageBase64 && (
               <div className="image-preview" style={{ padding: '0.5rem', background: 'var(--bg-glass)', borderRadius: '8px 8px 0 0', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>

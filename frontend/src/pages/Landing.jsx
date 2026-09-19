@@ -37,25 +37,14 @@ export default function Landing() {
         <WebGLShader />
         <div className="shader-hero-overlay" />
         <div className="shader-hero-content">
-          <motion.div
-            initial={{ opacity: 0, y: 15 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5 }}
-          >
-            <div className="shader-badge">
-              <span className="shader-badge-dot" />
-              Live on Polygon Amoy Testnet
-            </div>
-          </motion.div>
-
           <motion.h1
             className="shader-title"
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.7, delay: 0.1 }}
           >
-            The Future of<br />
-            <span className="shader-title-accent">AI Ownership</span>
+            THE <span className="shader-title-accent">future of&nbsp;</span><br />
+            AI OWNERSHIP
           </motion.h1>
 
           <motion.p
@@ -66,6 +55,7 @@ export default function Landing() {
           >
             Publish, monetize, and run AI models on a trustless blockchain network.
             <br />Zero intermediaries. Full encryption. Transparent revenue.
+            <br />UNF*CK YOUR CONTROL. UNF*CK YOUR DATA.
           </motion.p>
 
           <motion.div
@@ -107,7 +97,7 @@ export default function Landing() {
             viewport={{ once: true }}
             className="landing-section-header"
           >
-            <h2>Why Eclipse<span style={{ color: 'var(--accent-primary)' }}>.AI</span>?</h2>
+            <h2>Why ECLIPSE<span style={{ color: 'var(--accent-primary)' }}>.AI</span>?</h2>
             <p>A fully decentralized pipeline — from model upload to inference execution</p>
           </motion.div>
 

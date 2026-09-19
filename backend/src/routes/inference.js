@@ -98,7 +98,7 @@ router.post('/chat/completions', authenticateApiKey, async (req, res) => {
     }
 
     // Check user balance (pay-as-you-go: 1 SYN per request)
-    const costPerRequest = modelRecord.price_per_use || 1;
+    const costPerRequest = modelRecord.price_per_use ?? 1;
     const user = getOrCreateUser(req.userAddress);
     if (user.balance < costPerRequest) {
       return res.status(402).json({

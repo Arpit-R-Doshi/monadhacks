@@ -127,9 +127,8 @@ export default function UploadModel() {
     return (
       <div className="upload-page">
         <div className="empty-state" style={{ paddingTop: '4rem' }}>
-          <div className="icon">🔒</div>
-          <h3>Connect your wallet to upload models</h3>
-          <p style={{ marginBottom: '1.5rem' }}>You need a connected wallet to register model ownership</p>
+          <h3 style={{ fontSize: '1.4rem' }}>Connect your wallet to upload models</h3>
+          <p style={{ marginBottom: '1.5rem', fontSize: '1.2rem' }}>You need a connected wallet to register model ownership</p>
         </div>
       </div>
     );
@@ -138,15 +137,15 @@ export default function UploadModel() {
   return (
     <div className="upload-page">
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
-        <h1>Upload Model</h1>
-        <p className="subtitle">Register your AI model on the decentralized marketplace</p>
+        <h1 style={{ fontSize: '2rem' }}>Upload Model</h1>
+        <p className="subtitle" style={{ fontSize: '1.2rem' }}>Register your AI model on the decentralized marketplace</p>
 
         <div style={{ display: 'flex', gap: '1rem', marginBottom: '2rem' }}>
           <button 
             type="button"
             className={`btn ${!isRemote ? 'btn-primary' : ''}`}
             onClick={() => setIsRemote(false)}
-            style={{ flex: 1, background: !isRemote ? 'var(--accent-primary)' : 'var(--bg-highlight)', border: '1px solid var(--border-color)', color: !isRemote ? '#fff' : 'var(--text-secondary)' }}
+            style={{ flex: 1, background: !isRemote ? 'var(--accent-primary)' : 'var(--bg-highlight)', border: '1px solid var(--border-color)', color: !isRemote ? '#fff' : 'var(--text-secondary)', fontSize: '1.25rem', padding: '0.8rem' }}
           >
             Public Base Model (Ollama)
           </button>
@@ -154,7 +153,7 @@ export default function UploadModel() {
             type="button"
             className={`btn ${isRemote ? 'btn-primary' : ''}`}
             onClick={() => setIsRemote(true)}
-            style={{ flex: 1, background: isRemote ? 'var(--accent-primary)' : 'var(--bg-highlight)', border: '1px solid var(--border-color)', color: isRemote ? '#fff' : 'var(--text-secondary)' }}
+            style={{ flex: 1, background: isRemote ? 'var(--accent-primary)' : 'var(--bg-highlight)', border: '1px solid var(--border-color)', color: isRemote ? '#fff' : 'var(--text-secondary)', fontSize: '1.25rem', padding: '0.8rem' }}
           >
             Custom PyTorch Model (Remote Peer)
           </button>
@@ -240,11 +239,11 @@ export default function UploadModel() {
           {/* ─── CO-OWNERSHIP SECTION ─── */}
           <div style={{ padding: '1rem', background: 'rgba(33,150,243,0.06)', borderRadius: '8px', border: '1px dashed rgba(33,150,243,0.3)', marginBottom: '1rem' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
-              <h4 style={{ margin: 0, color: '#64b5f6', fontSize: '0.95rem' }}>👥 Co-Ownership & Revenue Sharing</h4>
+              <h4 style={{ margin: 0, color: '#64b5f6', fontSize: '1.4rem' }}>Co-Ownership & Revenue Sharing</h4>
               <button
                 type="button"
                 onClick={() => setCoOwners(prev => [...prev, { address: '', sharePercent: 10 }])}
-                style={{ background: 'rgba(33,150,243,0.15)', color: '#64b5f6', border: '1px solid rgba(33,150,243,0.3)', padding: '0.3rem 0.75rem', borderRadius: '6px', cursor: 'pointer', fontSize: '0.8rem', fontWeight: 'bold' }}
+                style={{ background: 'rgba(33,150,243,0.15)', color: '#64b5f6', border: '1px solid rgba(33,150,243,0.3)', padding: '0.4rem 0.85rem', borderRadius: '6px', cursor: 'pointer', fontSize: '1.1rem', fontWeight: 'bold' }}
               >
                 + Add Co-Owner
               </button>
@@ -292,18 +291,18 @@ export default function UploadModel() {
             ))}
 
             {coOwners.length > 0 && (
-              <div style={{ fontSize: '0.8rem', color: coOwners.reduce((s, c) => s + c.sharePercent, 0) > 100 ? '#ef5350' : '#059669', marginTop: '0.25rem' }}>
+              <div style={{ fontSize: '1.1rem', color: coOwners.reduce((s, c) => s + c.sharePercent, 0) > 100 ? '#ef5350' : '#059669', marginTop: '0.25rem' }}>
                 Co-owner total: {coOwners.reduce((s, c) => s + c.sharePercent, 0)}% — Your share: {100 - coOwners.reduce((s, c) => s + c.sharePercent, 0)}%
               </div>
             )}
           </div>
 
-          <div style={{ marginTop: '0.5rem', padding: '1rem', background: 'rgba(16,185,129,0.08)', borderRadius: 'var(--radius-sm)', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
-            <strong>🛡️ Decentralization Info:</strong> Model parameters will be synced onto IPFS guaranteeing immutable persistence. Operations route through verifiable compute paths encrypted with AES-256 bound to <span style={{ fontFamily: 'monospace', color: '#059669' }}>{wallet.slice(0, 10)}...</span>
+          <div style={{ marginTop: '0.5rem', padding: '1rem', background: 'rgba(16,185,129,0.08)', borderRadius: 'var(--radius-sm)', fontSize: '1.2rem', color: 'var(--text-secondary)' }}>
+            <strong>Decentralization Info:</strong> Model parameters will be synced onto IPFS guaranteeing immutable persistence. Operations route through verifiable compute paths encrypted with AES-256 bound to <span style={{ fontFamily: 'monospace', color: '#059669' }}>{wallet.slice(0, 10)}...</span>
           </div>
 
           <button className="btn btn-primary btn-lg" type="submit" disabled={loading} style={{ width: '100%', marginTop: '1.5rem' }}>
-            {loading ? 'Encrypting & Synching to IPFS...' : '🚀 Register Model on Blockchain'}
+            {loading ? 'Encrypting & Synching to IPFS...' : 'Register Model on Blockchain'}
           </button>
         </form>
       </motion.div>

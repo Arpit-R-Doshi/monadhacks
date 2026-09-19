@@ -40,7 +40,7 @@ export default function Marketplace() {
       <div className="marketplace-header">
         <div>
           <h1>AI Model Marketplace</h1>
-          <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
+          <p style={{ color: 'var(--text-secondary)', fontFamily: `'Bebas Neue', display, sans-serif`, fontSize: '1.2rem', letterSpacing: '0.06em', marginTop: '0.25rem' }}>
             Browse and run encrypted AI models with transparent pricing
           </p>
         </div>
@@ -89,15 +89,12 @@ export default function Marketplace() {
 
                   <div className="model-stats">
                     <div className="model-stat-item">
-                      <span>📊</span>
                       <span className="value">{model.total_uses || 0}</span> uses
                     </div>
                     <div className="model-stat-item">
-                      <span>⚡</span>
                       <span className="value">{model.rate_limit || 10}</span> req/min
                     </div>
                     <div className="model-stat-item">
-                      <span>🔐</span>
                       <span className="value">AES-256</span>
                     </div>
                   </div>
@@ -107,7 +104,7 @@ export default function Marketplace() {
                       <span className="amount">{model.price_per_use || 1}</span>
                       <span className="unit">ECL / use</span>
                     </div>
-                    <span className="btn btn-primary btn-sm">Try Now →</span>
+                    <span className="btn btn-primary" style={{ padding: '0.55rem 1.1rem', fontSize: '1.1rem', letterSpacing: '0.06em' }}>Try Now →</span>
                   </div>
                 </div>
               </Link>

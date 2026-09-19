@@ -17,6 +17,7 @@ export default function Dashboard() {
   const [selectedModel, setSelectedModel] = useState('gemma-2b-demo');
   const [models, setModels] = useState([]);
   const [showBuyModal, setShowBuyModal] = useState(false);
+  const [computeNodes, setComputeNodes] = useState([]);
 
   useEffect(() => {
     if (wallet) {
@@ -26,6 +27,7 @@ export default function Dashboard() {
     }
     fetchHealth();
     fetchModels();
+    fetchComputeNodes();
   }, [wallet]);
 
   const fetchModels = async () => {
@@ -114,6 +116,14 @@ export default function Dashboard() {
     } catch (err) { console.error('Health check error:', err); }
   };
 
+  const fetchComputeNodes = async () => {
+    try {
+      const res = await fetch(`${API_URL}/api/execute/nodes/health`);
+      const data = await res.json();
+      if (data.success) setComputeNodes(data.nodes);
+    } catch (err) { console.error('Compute nodes error:', err); }
+  };
+
   const apiKeyForSnippet = justCreatedKey || 'syn3_your_api_key_here';
   const baseUrl = window.location.origin.replace(':5173', ':3001');
 
@@ -179,7 +189,7 @@ console.log("Remaining balance:", data.syn3rgy.remaining_balance, "SYN");`,
     return (
       <div className="dashboard">
         <div className="empty-state" style={{ paddingTop: '6rem' }}>
-          <div className="icon">🔒</div>
+          <div className="icon"></div>
           <h3>Connect your wallet to view dashboard</h3>
           <p style={{ marginBottom: '1.5rem' }}>View your usage history, balance, and transaction records</p>
         </div>
@@ -197,43 +207,10 @@ console.log("Remaining balance:", data.syn3rgy.remaining_balance, "SYN");`,
         <p style={{ color: 'var(--text-secondary)' }}>Your activity and usage overview</p>
       </div>
 
-      <div className="dashboard-grid">
-        <motion.div className="card stat-card" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
-          <div className="stat-icon" style={{ background: 'rgba(108,43,217,0.15)', color: '#a78bfa' }}>💎</div>
-          <div className="stat-value">{balance.toFixed(1)}</div>
-          <div className="stat-label">ECL Balance</div>
-          <button
-            className="btn btn-primary btn-sm"
-            style={{ marginTop: '0.75rem', width: '100%' }}
-            onClick={() => setShowBuyModal(true)}
-          >
-            💰 Buy ECL
-          </button>
-        </motion.div>
-
-        <motion.div className="card stat-card" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
-          <div className="stat-icon" style={{ background: 'rgba(33,150,243,0.15)', color: '#64b5f6' }}>📊</div>
-          <div className="stat-value">{prompts.length}</div>
-          <div className="stat-label">Total Prompts</div>
-        </motion.div>
-
-        <motion.div className="card stat-card" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
-          <div className="stat-icon" style={{ background: 'rgba(16,185,129,0.12)', color: '#059669' }}>✅</div>
-          <div className="stat-value">{completedCount}</div>
-          <div className="stat-label">Successful</div>
-        </motion.div>
-
-        <motion.div className="card stat-card" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
-          <div className="stat-icon" style={{ background: 'rgba(255,171,64,0.15)', color: '#ffab40' }}>⚡</div>
-          <div className="stat-value">{health?.services?.compute?.healthy ? 'Online' : 'Sim'}</div>
-          <div className="stat-label">Compute Node</div>
-        </motion.div>
-      </div>
-
       {/* Platform Status */}
       {health && (
-        <motion.div className="card" style={{ marginBottom: '2rem', padding: '1.5rem' }} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.4 }}>
-          <h3 style={{ marginBottom: '1rem', fontSize: '1rem' }}>🏥 Platform Status</h3>
+        <motion.div className="card" style={{ marginBottom: '2rem', padding: '1.5rem', width: 'max-content' }} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.1 }}>
+          <h3 style={{ marginBottom: '1rem', fontSize: '1.4rem' }}>Platform Status</h3>
           <div style={{ display: 'flex', gap: '2rem', flexWrap: 'wrap' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
               <span className={`status-badge ${health.services?.database?.connected ? 'completed' : 'failed'}`}>●</span>
@@ -255,12 +232,141 @@ console.log("Remaining balance:", data.syn3rgy.remaining_balance, "SYN");`,
         </motion.div>
       )}
 
+      {/* Active Subscriptions */}
+      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.2 }}>
+        <h3 style={{ marginBottom: '1rem', fontSize: '1.2rem', fontWeight: 700 }}>Your Active Subscriptions</h3>
+        
+        {subscriptions.length === 0 ? (
+          <div className="card empty-state" style={{ padding: '2rem', marginBottom: '2rem' }}>
+            <div className="icon"></div>
+            <h3>No Active Subscriptions</h3>
+            <p>You haven't subscribed to any AI models yet.</p>
+          </div>
+        ) : (
+          <div className="models-grid" style={{ marginBottom: '2rem' }}>
+            {subscriptions.map(sub => {
+               const percent = Math.min(100, Math.round((sub.tokens_used / sub.tokens_allocated) * 100));
+               return (
+                  <div key={sub.id} className="card model-card" style={{ cursor: 'default' }}>
+                    <div className="model-header">
+                      <div>
+                        <div className="model-name">{sub.model_name}</div>
+                        <div className="model-category" style={{ fontSize: '0.7rem' }}>Expires: {new Date(sub.expires_at).toLocaleDateString()}</div>
+                      </div>
+                      <span className="status-badge completed" style={{ marginLeft: 'auto' }}>● Active</span>
+                    </div>
+                    
+                    <div style={{ marginTop: '1rem' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem', fontSize: '0.85rem' }}>
+                        <span>Tokens Used</span>
+                        <span style={{ fontWeight: 'bold' }}>{sub.tokens_used} / {sub.tokens_allocated}</span>
+                      </div>
+                      <div style={{ width: '100%', height: '8px', background: 'var(--bg-highlight)', borderRadius: '4px', overflow: 'hidden' }}>
+                        <div style={{ height: '100%', width: `${percent}%`, background: percent >= 90 ? 'var(--error)' : 'var(--accent-primary)', transition: 'width 0.3s ease' }}></div>
+                      </div>
+                    </div>
+                  </div>
+               );
+            })}
+          </div>
+        )}
+      </motion.div>
+
+      <div className="dashboard-grid">
+        <motion.div className="card stat-card" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
+          <div className="stat-value">{balance.toFixed(1)}</div>
+          <div className="stat-label">ECL Balance</div>
+          <button
+            className="btn btn-primary btn-sm"
+            style={{ marginTop: '0.75rem', width: '100%' }}
+            onClick={() => setShowBuyModal(true)}
+          >
+            Buy ECL
+          </button>
+        </motion.div>
+
+        <motion.div className="card stat-card" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
+          <div className="stat-value">{prompts.length}</div>
+          <div className="stat-label">Total Prompts</div>
+        </motion.div>
+
+        <motion.div className="card stat-card" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
+          <div className="stat-value">{completedCount}</div>
+          <div className="stat-label">Successful</div>
+        </motion.div>
+
+        <motion.div className="card stat-card" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
+          <div className="stat-value">{computeNodes.filter(n => n.healthy).length}/{computeNodes.length}</div>
+          <div className="stat-label">Nodes Online</div>
+        </motion.div>
+      </div>
+
+      {/* Compute Nodes Panel */}
+      {computeNodes.length > 0 && (
+        <motion.div className="card" style={{ marginBottom: '2rem', padding: '1.5rem' }} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.35 }}>
+          <h3 style={{ marginBottom: '1rem', fontSize: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            Compute Nodes
+            <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 400 }}>{computeNodes.filter(n => n.healthy).length} online</span>
+          </h3>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: '0.75rem' }}>
+            {computeNodes.map(node => (
+              <div key={node.id} style={{
+                background: 'rgba(255,255,255,0.03)', border: `1px solid ${node.healthy ? 'rgba(16,185,129,0.3)' : 'rgba(244,67,54,0.3)'}`,
+                borderRadius: '10px', padding: '1rem',
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
+                  <span style={{ fontSize: '1.2rem' }}>{node.icon}</span>
+                  <span style={{ fontWeight: 700, fontSize: '0.9rem' }}>{node.name}</span>
+                  <span className={`status-badge ${node.healthy ? 'completed' : 'failed'}`} style={{ marginLeft: 'auto', fontSize: '0.7rem' }}>
+                    {node.healthy ? '● Online' : '● Offline'}
+                  </span>
+                </div>
+                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{node.location}</div>
+                <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '0.25rem' }}>{node.specs}</div>
+                {node.healthy && node.models && (
+                  <div style={{ display: 'flex', gap: '0.3rem', flexWrap: 'wrap', marginTop: '0.5rem' }}>
+                    {node.models.map(m => (
+                      <span key={m} style={{
+                        fontSize: '0.65rem', padding: '0.15rem 0.4rem', borderRadius: '4px',
+                        background: 'rgba(167,139,250,0.1)', color: '#a78bfa', border: '1px solid rgba(167,139,250,0.2)',
+                      }}>{m}</span>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </motion.div>
+      )}
+
+      {/* (Moved Platform Status) */}
+
       {/* API Keys Section */}
       <motion.div className="card" style={{ marginBottom: '2rem', padding: '1.5rem' }} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.45 }}>
         <h3 style={{ marginBottom: '1rem', fontSize: '1.2rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-          🔑 API Keys
-          <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 400 }}>Pay-as-you-go · {apiKeys.filter(k => k.is_active).length}/5 active</span>
+          API Keys
+          <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 400 }}>Pay-per-use · {apiKeys.filter(k => k.is_active).length}/5 active</span>
         </h3>
+
+        {/* Per-Model API Pricing */}
+        {models.length > 0 && (
+          <div style={{ marginBottom: '1.5rem' }}>
+            <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '0.5rem', fontWeight: 600 }}>API Pricing (pay per call)</div>
+            <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+              {models.filter(m => m.is_active).map(m => (
+                <div key={m.id} style={{
+                  display: 'flex', alignItems: 'center', gap: '0.4rem',
+                  background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)',
+                  borderRadius: '8px', padding: '0.35rem 0.65rem', fontSize: '0.75rem',
+                }}>
+                  <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{m.name}</span>
+                  <span style={{ color: '#a78bfa', fontWeight: 700 }}>{m.price_per_use} ECL</span>
+                  <span style={{ color: 'var(--text-muted)' }}>/call</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Generate Key */}
         <div style={{ display: 'flex', gap: '0.75rem', marginBottom: '1.5rem', flexWrap: 'wrap' }}>
@@ -292,7 +398,7 @@ console.log("Remaining balance:", data.syn3rgy.remaining_balance, "SYN");`,
             borderRadius: '10px', padding: '1rem', marginBottom: '1.5rem',
           }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
-              <span style={{ fontWeight: 700, color: '#059669', fontSize: '0.85rem' }}>⚠️ Copy your API key now — it won't be shown again!</span>
+              <span style={{ fontWeight: 700, color: '#059669', fontSize: '0.85rem' }}>Warning: Copy your API key now — it won't be shown again!</span>
               <button onClick={() => setJustCreatedKey(null)} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontSize: '1.2rem' }}>×</button>
             </div>
             <div style={{
@@ -308,7 +414,7 @@ console.log("Remaining balance:", data.syn3rgy.remaining_balance, "SYN");`,
                   padding: '0.4rem 1rem', borderRadius: '6px', cursor: 'pointer', fontSize: '0.8rem', whiteSpace: 'nowrap',
                 }}
               >
-                📋 Copy
+                Copy
               </button>
             </div>
           </div>
@@ -421,49 +527,11 @@ console.log("Remaining balance:", data.syn3rgy.remaining_balance, "SYN");`,
         </div>
       </motion.div>
 
-      {/* Active Subscriptions */}
-      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.5 }}>
-        <h3 style={{ marginBottom: '1rem', fontSize: '1.2rem', fontWeight: 700 }}>Your Active Subscriptions</h3>
-        
-        {subscriptions.length === 0 ? (
-          <div className="card empty-state" style={{ padding: '2rem', marginBottom: '2rem' }}>
-            <div className="icon">🎫</div>
-            <h3>No Active Subscriptions</h3>
-            <p>You haven't subscribed to any AI models yet.</p>
-          </div>
-        ) : (
-          <div className="models-grid" style={{ marginBottom: '2rem' }}>
-            {subscriptions.map(sub => {
-               const percent = Math.min(100, Math.round((sub.tokens_used / sub.tokens_allocated) * 100));
-               return (
-                  <div key={sub.id} className="card model-card" style={{ cursor: 'default' }}>
-                    <div className="model-header">
-                      <div>
-                        <div className="model-name">{sub.model_name}</div>
-                        <div className="model-category" style={{ fontSize: '0.7rem' }}>Expires: {new Date(sub.expires_at).toLocaleDateString()}</div>
-                      </div>
-                      <span className="status-badge completed" style={{ marginLeft: 'auto' }}>● Active</span>
-                    </div>
-                    
-                    <div style={{ marginTop: '1rem' }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem', fontSize: '0.85rem' }}>
-                        <span>Tokens Used</span>
-                        <span style={{ fontWeight: 'bold' }}>{sub.tokens_used} / {sub.tokens_allocated}</span>
-                      </div>
-                      <div style={{ width: '100%', height: '8px', background: 'var(--bg-highlight)', borderRadius: '4px', overflow: 'hidden' }}>
-                        <div style={{ height: '100%', width: `${percent}%`, background: percent >= 90 ? 'var(--error)' : 'var(--accent-primary)', transition: 'width 0.3s ease' }}></div>
-                      </div>
-                    </div>
-                  </div>
-               );
-            })}
-          </div>
-        )}
-      </motion.div>
+      {/* (Moved Active Subscriptions) */}
 
       {/* Transaction History */}
       <motion.div className="card" style={{ padding: '1.5rem' }} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.5 }}>
-        <h3 style={{ marginBottom: '1rem', fontSize: '1rem' }}>📜 Prompt History</h3>
+        <h3 style={{ marginBottom: '1rem', fontSize: '1rem' }}>Prompt History</h3>
 
         {prompts.length === 0 ? (
           <div className="empty-state" style={{ padding: '2rem' }}>

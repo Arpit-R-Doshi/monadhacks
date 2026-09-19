@@ -47,10 +47,7 @@ export default function ChatHistory() {
   };
 
   const getModelIcon = (name) => {
-    if (!name) return '🤖';
-    if (name.toLowerCase().includes('gemma')) return '💎';
-    if (name.toLowerCase().includes('llama')) return '🦙';
-    return '🤖';
+    return '';
   };
 
   const filteredConvs = conversations.filter(c => {
@@ -71,7 +68,7 @@ export default function ChatHistory() {
     return (
       <div className="history-page">
         <div className="empty-state" style={{ padding: '6rem 2rem' }}>
-          <div className="icon">🔐</div>
+          <div className="icon"></div>
           <h3>Connect your wallet</h3>
           <p>Your chat history will appear here once you connect your wallet.</p>
         </div>
@@ -83,13 +80,13 @@ export default function ChatHistory() {
     <div className="history-page">
       <div className="history-header">
         <div>
-          <h1>Chat History</h1>
-          <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginTop: '0.25rem' }}>
+          <h1 style={{ fontSize: '2.4rem' }}>Chat History</h1>
+          <p style={{ color: 'var(--text-secondary)', fontSize: '1.2rem', marginTop: '0.25rem' }}>
             All your previous conversations across AI models
           </p>
         </div>
         <div className="search-bar" style={{ minWidth: '280px' }}>
-          <span>🔍</span>
+          <span></span>
           <input
             type="text"
             placeholder="Search conversations..."
@@ -106,7 +103,7 @@ export default function ChatHistory() {
         </div>
       ) : filteredConvs.length === 0 ? (
         <div className="empty-state" style={{ padding: '4rem' }}>
-          <div className="icon">💬</div>
+          <div className="icon"></div>
           <h3>{search ? 'No results found' : 'No conversations yet'}</h3>
           <p>{search ? 'Try a different search term.' : 'Start chatting with AI models in the marketplace!'}</p>
           {!search && <Link to="/marketplace" className="btn btn-primary" style={{ marginTop: '1rem' }}>Browse Models</Link>}
@@ -189,9 +186,9 @@ export default function ChatHistory() {
                             {msg.assistantResponse}
                             {(msg.inputTokens || msg.outputTokens || msg.durationMs) && (
                               <div className="meta" style={{ marginTop: '0.5rem' }}>
-                                {msg.inputTokens > 0 && <span>📥 {msg.inputTokens} in</span>}
-                                {msg.outputTokens > 0 && <span>📤 {msg.outputTokens} out</span>}
-                                {msg.durationMs > 0 && <span>⏱️ {(msg.durationMs / 1000).toFixed(1)}s</span>}
+                                {msg.inputTokens > 0 && <span>In: {msg.inputTokens} | </span>}
+                                {msg.outputTokens > 0 && <span>Out: {msg.outputTokens} | </span>}
+                                {msg.durationMs > 0 && <span>Time: {(msg.durationMs / 1000).toFixed(1)}s</span>}
                                 {msg.promptCid && (
                                   <a
                                     href={`https://gateway.pinata.cloud/ipfs/${msg.promptCid}`}
@@ -200,7 +197,7 @@ export default function ChatHistory() {
                                     style={{ color: '#a78bfa', textDecoration: 'none' }}
                                     title="View encrypted prompt on IPFS"
                                   >
-                                    📌 IPFS
+                                    IPFS
                                   </a>
                                 )}
                                 {msg.txHash && (
@@ -211,7 +208,7 @@ export default function ChatHistory() {
                                     style={{ color: '#34d399', textDecoration: 'none' }}
                                     title="View transaction on Polygon Amoy Explorer"
                                   >
-                                    ⛓️ Polygonscan
+                                    Polygonscan
                                   </a>
                                 )}
                               </div>
@@ -225,7 +222,7 @@ export default function ChatHistory() {
               </>
             ) : (
               <div className="empty-state" style={{ height: '100%' }}>
-                <div className="icon">👈</div>
+                <div className="icon"></div>
                 <p>Select a conversation</p>
               </div>
             )}

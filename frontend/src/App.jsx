@@ -141,7 +141,7 @@ function App() {
           <Route path="/owner/upload" element={<UploadModel />} />
         </Routes>
         <footer className="footer">
-          <p>© 2026 Eclipse.AI — Decentralized AI Model Marketplace | Built on Polygon Amoy</p>
+          <p>© 2026 ECLIPSE.AI — Decentralized AI Model Marketplace | Built on Polygon Amoy</p>
         </footer>
       </BrowserRouter>
     </AppContext.Provider>
