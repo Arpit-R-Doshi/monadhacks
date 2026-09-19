@@ -31,6 +31,13 @@ function App() {
     chainId: monadTestnet.id,
   });
 
+  // Sync reactive Wagmi balance to state
+  useEffect(() => {
+    if (onChainBalData?.formatted) {
+      setBalance(parseFloat(onChainBalData.formatted));
+    }
+  }, [onChainBalData]);
+
   // Fetch app config
   useEffect(() => {
     const fetchConfig = async () => {
@@ -64,7 +71,11 @@ function App() {
       });
       const data = await res.json();
       if (data.success) {
-        setBalance(data.user.balance);
+        if (data.monadBalance && data.monadBalance !== '0.00' && data.monadBalance !== '0') {
+          setBalance(parseFloat(data.monadBalance));
+        } else if (data.user?.balance !== undefined) {
+          setBalance(data.user.balance);
+        }
       }
     } catch (err) {
       console.error('Wallet sync error:', err);
@@ -77,15 +88,15 @@ function App() {
       if (refetchOnChainBal) {
         const onChainRes = await refetchOnChainBal();
         if (onChainRes.data?.formatted) {
-          const parsed = parseFloat(onChainRes.data.formatted);
-          if (parsed > 0) {
-            setBalance(parsed);
-          }
+          setBalance(parseFloat(onChainRes.data.formatted));
+          return;
         }
       }
       const res = await fetch(`${API_URL}/api/wallet/balance/${wallet}`);
       const data = await res.json();
-      if (data.platformBalance !== undefined) {
+      if (data.monadBalance && data.monadBalance !== '0.00') {
+        setBalance(parseFloat(data.monadBalance));
+      } else if (data.platformBalance !== undefined) {
         setBalance(data.platformBalance);
       }
     } catch (err) {

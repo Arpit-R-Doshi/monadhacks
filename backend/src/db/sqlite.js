@@ -253,7 +253,7 @@ export function getPromptsByUser(userAddress) {
 export function getOrCreateUser(address) {
   let user = db.prepare('SELECT * FROM users WHERE address = ?').get(address);
   if (!user) {
-    db.prepare('INSERT INTO users (address, balance) VALUES (?, 100)').run(address);
+    db.prepare('INSERT INTO users (address, balance) VALUES (?, 0)').run(address);
     user = db.prepare('SELECT * FROM users WHERE address = ?').get(address);
   }
   return user;

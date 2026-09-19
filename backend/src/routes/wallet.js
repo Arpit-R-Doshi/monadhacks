@@ -18,7 +18,7 @@ router.post('/connect', async (req, res) => {
     try {
       monadBal = await getMonadNativeBalance(address);
       const parsedOnChain = parseFloat(monadBal);
-      if (parsedOnChain > 0 && user.balance < parsedOnChain) {
+      if (!isNaN(parsedOnChain)) {
         updateUserBalance(address, parsedOnChain - user.balance);
       }
     } catch (e) {
@@ -51,22 +51,15 @@ router.get('/balance/:address', async (req, res) => {
     const address = req.params.address;
     const user = getOrCreateUser(address);
     let monadBalance = '0';
-    let tokenBalance = '0';
 
     try {
       monadBalance = await getMonadNativeBalance(address);
       const parsedMonad = parseFloat(monadBalance);
-      if (parsedMonad > 0 && user.balance < parsedMonad) {
+      if (!isNaN(parsedMonad)) {
         updateUserBalance(address, parsedMonad - user.balance);
       }
     } catch (e) {
       console.log('[Wallet] Could not fetch native Monad balance:', e.message);
-    }
-
-    try {
-      tokenBalance = await getTokenBalance(address);
-    } catch (e) {
-      console.log('[Wallet] Could not fetch on-chain token balance:', e.message);
     }
 
     const refreshedUser = getOrCreateUser(address);
@@ -76,7 +69,7 @@ router.get('/balance/:address', async (req, res) => {
       currency: 'MON',
       platformBalance: refreshedUser.balance,
       monadBalance,
-      onChainBalance: monadBalance !== '0.00' ? monadBalance : tokenBalance,
+      onChainBalance: monadBalance,
       totalSpent: refreshedUser.total_spent,
       totalPrompts: refreshedUser.total_prompts,
     });
@@ -96,7 +89,7 @@ router.post('/faucet', async (req, res) => {
 
     // Add platform credits
     const user = getOrCreateUser(address);
-    updateUserBalance(address, 100);
+    updateUserBalance(address, 10);
 
     // Try on-chain faucet too
     let chainResult = { simulated: true };
