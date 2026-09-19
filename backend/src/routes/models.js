@@ -4,7 +4,7 @@ import multer from 'multer';
 import { generateKey, encrypt } from '../services/encryption.js';
 import { uploadToIPFS } from '../services/ipfs.js';
 import { registerModelOnChain } from '../services/blockchain.js';
-import { saveModel, getModels, getModelById, deleteModel, getOwnerSubscriptionStats } from '../db/sqlite.js';
+import { saveModel, getModels, getModelById, deleteModel, getOwnerSubscriptionStats, addCoOwner, removeCoOwner, getCoOwners, transferModelOwnership, getModelsSharedWithMe } from '../db/sqlite.js';
 
 const router = Router();
 const upload = multer({
@@ -52,13 +52,17 @@ router.post('/upload', upload.fields([{ name: 'weightsFile' }, { name: 'configFi
     // Upload encrypted metadata to IPFS
     const { cid } = await uploadToIPFS(encryptedMetadata, `model_${modelId}`);
 
-    // Register on blockchain (Skipped per user request to avoid 500 gas errors)
-    console.log(`[Models] Bypassing blockchain registration for ${modelId}, storing locally only.`);
-    // await registerModelOnChain(
-    //  modelId, name, description || '', cid,
-    //  category || 'text-generation',
-    //  Number(pricePerUse) || 1, Number(subscriptionPrice) || 10, Number(rateLimit) || 10
-    // );
+    // Register on blockchain (graceful — saves to DB regardless)
+    try {
+      await registerModelOnChain(
+        modelId, name, description || '', cid,
+        category || 'text-generation',
+        Number(pricePerUse) || 1, Number(subscriptionPrice) || 10, Number(rateLimit) || 10
+      );
+      console.log(`[Models] ✅ Registered ${modelId} on-chain.`);
+    } catch (chainErr) {
+      console.warn(`[Models] ⚠️ On-chain registration failed (model will still be saved locally): ${chainErr.shortMessage || chainErr.message}`);
+    }
 
     // Save to local DB
     saveModel({
@@ -79,6 +83,25 @@ router.post('/upload', upload.fields([{ name: 'weightsFile' }, { name: 'configFi
       modelWeightsCid: weightsCid,
       modelConfigCid: configCid
     });
+
+    // Handle co-owners passed during upload
+    const coOwnersRaw = req.body.coOwners;
+    if (coOwnersRaw) {
+      try {
+        const coOwners = JSON.parse(coOwnersRaw);
+        let totalShare = 0;
+        for (const co of coOwners) {
+          if (co.address && co.sharePercent > 0) {
+            totalShare += co.sharePercent;
+            if (totalShare > 100) break;
+            addCoOwner(modelId, co.address, co.sharePercent);
+          }
+        }
+        console.log(`[Models] Added ${coOwners.length} co-owners for ${modelId}`);
+      } catch (e) {
+        console.warn('[Models] Failed to parse coOwners:', e.message);
+      }
+    }
 
     res.json({
       success: true,
@@ -147,6 +170,20 @@ router.get('/', (req, res) => {
 });
 
 /**
+ * GET /api/models/shared/:wallet
+ * Get models shared with a wallet (MUST be before /:id)
+ */
+router.get('/shared/:wallet', (req, res) => {
+  try {
+    const models = getModelsSharedWithMe(req.params.wallet);
+    const safeModels = models.map(({ encryption_key, ...rest }) => rest);
+    res.json({ success: true, models: safeModels });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+/**
  * GET /api/models/:id
  * Get model details
  */
@@ -157,6 +194,124 @@ router.get('/:id', (req, res) => {
     const { encryption_key, ...safeModel } = model;
     res.json({ model: safeModel });
   } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ─── CO-OWNERSHIP ROUTES ────────────────────────────────────
+
+/**
+ * POST /api/models/:id/share
+ * Add or update co-owners for a model
+ */
+router.post('/:id/share', (req, res) => {
+  try {
+    const { id } = req.params;
+    const { ownerAddress, coOwners } = req.body;
+
+    if (!ownerAddress || !coOwners || !Array.isArray(coOwners)) {
+      return res.status(400).json({ error: 'ownerAddress and coOwners array required' });
+    }
+
+    const model = getModelById(id);
+    if (!model) return res.status(404).json({ error: 'Model not found' });
+    if (model.owner_address.toLowerCase() !== ownerAddress.toLowerCase()) {
+      return res.status(403).json({ error: 'Only the primary owner can manage co-owners' });
+    }
+
+    // Validate total doesn't exceed 100
+    let totalShare = 0;
+    for (const co of coOwners) {
+      if (!co.address || co.sharePercent <= 0 || co.sharePercent > 100) {
+        return res.status(400).json({ error: `Invalid co-owner entry: ${JSON.stringify(co)}` });
+      }
+      if (co.address.toLowerCase() === ownerAddress.toLowerCase()) {
+        return res.status(400).json({ error: 'Primary owner cannot be added as co-owner' });
+      }
+      totalShare += co.sharePercent;
+    }
+    if (totalShare > 100) {
+      return res.status(400).json({ error: `Total share ${totalShare}% exceeds 100%` });
+    }
+
+    // Clear existing co-owners and re-add
+    const existing = getCoOwners(id);
+    for (const co of existing) {
+      removeCoOwner(id, co.wallet_address);
+    }
+    for (const co of coOwners) {
+      addCoOwner(id, co.address, co.sharePercent);
+    }
+
+    res.json({ success: true, message: `${coOwners.length} co-owners updated.` });
+  } catch (err) {
+    console.error('[Models API] Share error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+/**
+ * GET /api/models/:id/co-owners
+ * List co-owners for a model
+ */
+router.get('/:id/co-owners', (req, res) => {
+  try {
+    const coOwners = getCoOwners(req.params.id);
+    res.json({ success: true, coOwners });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+/**
+ * DELETE /api/models/:id/co-owners/:wallet
+ * Remove a single co-owner
+ */
+router.delete('/:id/co-owners/:wallet', (req, res) => {
+  try {
+    const { id, wallet } = req.params;
+    const { ownerAddress } = req.body;
+
+    const model = getModelById(id);
+    if (!model) return res.status(404).json({ error: 'Model not found' });
+    if (model.owner_address.toLowerCase() !== ownerAddress?.toLowerCase()) {
+      return res.status(403).json({ error: 'Only the primary owner can remove co-owners' });
+    }
+
+    removeCoOwner(id, wallet);
+    res.json({ success: true, message: 'Co-owner removed.' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+/**
+ * POST /api/models/:id/transfer
+ * Transfer full ownership of a model
+ */
+router.post('/:id/transfer', (req, res) => {
+  try {
+    const { id } = req.params;
+    const { currentOwner, newOwner } = req.body;
+
+    if (!currentOwner || !newOwner) {
+      return res.status(400).json({ error: 'currentOwner and newOwner required' });
+    }
+    if (currentOwner.toLowerCase() === newOwner.toLowerCase()) {
+      return res.status(400).json({ error: 'Cannot transfer to yourself' });
+    }
+
+    const model = getModelById(id);
+    if (!model) return res.status(404).json({ error: 'Model not found' });
+    if (model.owner_address.toLowerCase() !== currentOwner.toLowerCase()) {
+      return res.status(403).json({ error: 'You are not the owner of this model' });
+    }
+
+    transferModelOwnership(id, currentOwner, newOwner);
+
+    res.json({ success: true, message: `Ownership transferred to ${newOwner}` });
+  } catch (err) {
+    console.error('[Models API] Transfer error:', err);
     res.status(500).json({ error: err.message });
   }
 });

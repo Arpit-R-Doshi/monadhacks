@@ -35,11 +35,15 @@ router.post('/', async (req, res) => {
     // 3. Check for active subscription
     const user = getOrCreateUser(userAddress);
     
-    // Perform highly-secure read from Layer-2 Polygon RPC (Skipped for off-chain models)
-    // const hasPolygonSub = await hasActiveSubOnChain(userAddress, modelId);
-    // if (!hasPolygonSub) {
-    //    return res.status(403).json({ error: 'Active subscription required on Polygon Amoy to use this model.' });
-    // }
+    // Perform highly-secure read from Layer-2 Polygon RPC
+    try {
+      const hasPolygonSub = await hasActiveSubOnChain(userAddress, modelId);
+      if (!hasPolygonSub) {
+         console.warn('[Execution] No on-chain subscription found, proceeding with local check only.');
+      }
+    } catch (chainErr) {
+      console.warn('[Execution] On-chain subscription check failed:', chainErr.shortMessage || chainErr.message);
+    }
     
     const sub = getSubscription(userAddress, modelId);
     if (sub && sub.tokens_used >= sub.tokens_allocated) {
@@ -77,10 +81,14 @@ router.post('/', async (req, res) => {
     // 5. Upload encrypted prompt to IPFS
     const { cid: promptCid } = await uploadToIPFS(encryptedPrompt, `prompt_${promptId}`);
 
-    // 6. Record prompt on-chain (Skipped)
+    // 6. Record prompt on-chain
     const inputTokens = Math.ceil(finalPrompt.length / 4);
-    // const chainResult = await createPromptOnChain(promptId, modelId, promptCid, inputTokens);
-    const chainResult = { hash: '0x_simulated' };
+    let chainResult = { hash: '0x_local' };
+    try {
+      chainResult = await createPromptOnChain(promptId, modelId, promptCid, inputTokens);
+    } catch (chainErr) {
+      console.warn('[Execution] On-chain prompt recording failed:', chainErr.shortMessage || chainErr.message);
+    }
 
     // 7. Save prompt to DB
     savePrompt({
@@ -102,16 +110,24 @@ router.post('/', async (req, res) => {
     // 10. Upload encrypted response to IPFS
     const { cid: responseCid } = await uploadToIPFS(encryptedResponse, `response_${promptId}`);
 
-    // 11. Submit response on-chain (Skipped)
+    // 11. Submit response on-chain
     const computeNodeAddress = process.env.COMPUTE_NODE_ADDRESS || '0x0000000000000000000000000000000000000000';
-    // const responseChainResult = await submitResponseOnChain(promptId, computeNodeAddress, responseCid, inferenceResult.outputTokens);
-    const responseChainResult = { hash: '0x_simulated' };
+    let responseChainResult = { hash: '0x_local' };
+    try {
+      responseChainResult = await submitResponseOnChain(promptId, computeNodeAddress, responseCid, inferenceResult.outputTokens);
+    } catch (chainErr) {
+      console.warn('[Execution] On-chain response submission failed:', chainErr.shortMessage || chainErr.message);
+    }
 
     // 12. Deduct tokens
     const totalTokens = inferenceResult.inputTokens + inferenceResult.outputTokens;
     
-    // Persist to Layer-2 Smart Contract (Skipped)
-    // await deductFromSubscriptionOnChain(userAddress, modelId, totalTokens);
+    // Persist to Layer-2 Smart Contract
+    try {
+      await deductFromSubscriptionOnChain(userAddress, modelId, totalTokens);
+    } catch (chainErr) {
+      console.warn('[Execution] On-chain deduction failed:', chainErr.shortMessage || chainErr.message);
+    }
     
     // Persist to lightning-fast DB read index
     if (sub) {

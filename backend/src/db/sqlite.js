@@ -86,6 +86,14 @@ export function initDB() {
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       last_used_at DATETIME
     );
+
+    CREATE TABLE IF NOT EXISTS model_co_owners (
+      model_id TEXT,
+      wallet_address TEXT,
+      share_percent REAL DEFAULT 0,
+      added_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      PRIMARY KEY (model_id, wallet_address)
+    );
   `);
 
   console.log('[DB] SQLite initialized at', DB_PATH);
@@ -291,5 +299,47 @@ export function updateApiKeyUsage(keyId, tokensUsed) {
     UPDATE api_keys SET total_requests = total_requests + 1, total_tokens_used = total_tokens_used + ?, last_used_at = CURRENT_TIMESTAMP
     WHERE id = ?
   `).run(tokensUsed, keyId);
+}
+
+// ─── CO-OWNERSHIP OPERATIONS ────────────────────────────────
+
+export function addCoOwner(modelId, walletAddress, sharePercent) {
+  const stmt = db.prepare(`
+    INSERT OR REPLACE INTO model_co_owners (model_id, wallet_address, share_percent)
+    VALUES (?, ?, ?)
+  `);
+  return stmt.run(modelId, walletAddress.toLowerCase(), sharePercent);
+}
+
+export function removeCoOwner(modelId, walletAddress) {
+  return db.prepare('DELETE FROM model_co_owners WHERE model_id = ? AND wallet_address = ?')
+    .run(modelId, walletAddress.toLowerCase());
+}
+
+export function getCoOwners(modelId) {
+  return db.prepare('SELECT * FROM model_co_owners WHERE model_id = ? ORDER BY added_at ASC')
+    .all(modelId);
+}
+
+export function transferModelOwnership(modelId, currentOwner, newOwner) {
+  const txn = db.transaction(() => {
+    // Update model's primary owner
+    db.prepare('UPDATE models SET owner_address = ? WHERE id = ? AND owner_address = ?')
+      .run(newOwner.toLowerCase(), modelId, currentOwner.toLowerCase());
+
+    // Remove new owner from co-owners if they were one
+    db.prepare('DELETE FROM model_co_owners WHERE model_id = ? AND wallet_address = ?')
+      .run(modelId, newOwner.toLowerCase());
+  });
+  txn();
+}
+
+export function getModelsSharedWithMe(walletAddress) {
+  return db.prepare(`
+    SELECT m.*, co.share_percent
+    FROM model_co_owners co
+    JOIN models m ON co.model_id = m.id
+    WHERE co.wallet_address = ? AND m.is_active = 1
+  `).all(walletAddress.toLowerCase());
 }
 

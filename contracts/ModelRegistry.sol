@@ -197,4 +197,136 @@ contract ModelRegistry is Ownable {
     function getModelCount() external view returns (uint256) {
         return models.length;
     }
+
+    // ─── CO-OWNERSHIP & TRANSFER ────────────────────────────────
+
+    struct CoOwner {
+        address wallet;
+        uint256 sharePercent; // 0-100
+    }
+
+    // Model ID => array of co-owners
+    mapping(string => CoOwner[]) private modelCoOwners;
+    // Model ID => wallet => is co-owner (fast lookup)
+    mapping(string => mapping(address => bool)) public isCoOwner;
+
+    event CoOwnerAdded(string indexed modelId, address indexed wallet, uint256 sharePercent);
+    event CoOwnerRemoved(string indexed modelId, address indexed wallet);
+    event ModelOwnershipTransferred(string indexed modelId, address indexed previousOwner, address indexed newOwner);
+
+    /**
+     * @dev Add co-owners with percentage-based revenue sharing.
+     * Only callable by the primary model owner.
+     * Total share across all co-owners must not exceed 100%.
+     */
+    function addCoOwners(
+        string calldata _modelId,
+        address[] calldata _wallets,
+        uint256[] calldata _shares
+    ) external {
+        require(modelExists[_modelId], "Model does not exist");
+        Model storage model = models[modelIndex[_modelId]];
+        require(model.owner == msg.sender, "Not the model owner");
+        require(_wallets.length == _shares.length, "Arrays length mismatch");
+        require(_wallets.length > 0, "Empty co-owner list");
+
+        // Calculate existing total share
+        uint256 totalShare = 0;
+        CoOwner[] storage existing = modelCoOwners[_modelId];
+        for (uint256 i = 0; i < existing.length; i++) {
+            totalShare += existing[i].sharePercent;
+        }
+
+        // Add new co-owners
+        for (uint256 i = 0; i < _wallets.length; i++) {
+            require(_wallets[i] != address(0), "Invalid address");
+            require(_shares[i] > 0 && _shares[i] <= 100, "Share must be 1-100");
+            require(!isCoOwner[_modelId][_wallets[i]], "Already a co-owner");
+            require(_wallets[i] != model.owner, "Owner cannot be a co-owner");
+
+            totalShare += _shares[i];
+            require(totalShare <= 100, "Total shares exceed 100%");
+
+            modelCoOwners[_modelId].push(CoOwner({
+                wallet: _wallets[i],
+                sharePercent: _shares[i]
+            }));
+            isCoOwner[_modelId][_wallets[i]] = true;
+
+            emit CoOwnerAdded(_modelId, _wallets[i], _shares[i]);
+        }
+    }
+
+    /**
+     * @dev Remove a co-owner. Only callable by the primary model owner.
+     */
+    function removeCoOwner(string calldata _modelId, address _wallet) external {
+        require(modelExists[_modelId], "Model does not exist");
+        Model storage model = models[modelIndex[_modelId]];
+        require(model.owner == msg.sender, "Not the model owner");
+        require(isCoOwner[_modelId][_wallet], "Not a co-owner");
+
+        CoOwner[] storage coOwners = modelCoOwners[_modelId];
+        for (uint256 i = 0; i < coOwners.length; i++) {
+            if (coOwners[i].wallet == _wallet) {
+                coOwners[i] = coOwners[coOwners.length - 1];
+                coOwners.pop();
+                break;
+            }
+        }
+        isCoOwner[_modelId][_wallet] = false;
+
+        emit CoOwnerRemoved(_modelId, _wallet);
+    }
+
+    /**
+     * @dev Transfer full primary ownership of a model.
+     * Clears the model from the old owner's list and adds to the new owner's list.
+     */
+    function transferModelOwnership(string calldata _modelId, address _newOwner) external {
+        require(modelExists[_modelId], "Model does not exist");
+        require(_newOwner != address(0), "Invalid new owner");
+        Model storage model = models[modelIndex[_modelId]];
+        require(model.owner == msg.sender, "Not the model owner");
+        require(_newOwner != msg.sender, "Already the owner");
+
+        address previousOwner = model.owner;
+        model.owner = _newOwner;
+
+        // Remove from old owner's list
+        string[] storage oldList = ownerModels[previousOwner];
+        for (uint256 i = 0; i < oldList.length; i++) {
+            if (keccak256(bytes(oldList[i])) == keccak256(bytes(_modelId))) {
+                oldList[i] = oldList[oldList.length - 1];
+                oldList.pop();
+                break;
+            }
+        }
+
+        // Add to new owner's list
+        ownerModels[_newOwner].push(_modelId);
+
+        // Remove new owner from co-owners if they were one
+        if (isCoOwner[_modelId][_newOwner]) {
+            CoOwner[] storage coOwners = modelCoOwners[_modelId];
+            for (uint256 i = 0; i < coOwners.length; i++) {
+                if (coOwners[i].wallet == _newOwner) {
+                    coOwners[i] = coOwners[coOwners.length - 1];
+                    coOwners.pop();
+                    break;
+                }
+            }
+            isCoOwner[_modelId][_newOwner] = false;
+        }
+
+        emit ModelOwnershipTransferred(_modelId, previousOwner, _newOwner);
+    }
+
+    /**
+     * @dev Get all co-owners for a model.
+     */
+    function getCoOwners(string calldata _modelId) external view returns (CoOwner[] memory) {
+        require(modelExists[_modelId], "Model does not exist");
+        return modelCoOwners[_modelId];
+    }
 }

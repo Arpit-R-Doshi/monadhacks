@@ -26,6 +26,8 @@ export default function UploadModel() {
     configFile: null,
   });
 
+  const [coOwners, setCoOwners] = useState([]);
+
   const handleChange = (e) => {
     const { name, value } = e.target;
     setForm(prev => ({ ...prev, [name]: value }));
@@ -94,6 +96,12 @@ export default function UploadModel() {
         formData.append('computeNodeUrl', form.computeNodeUrl);
         formData.append('weightsFile', files.weightsFile);
         formData.append('configFile', files.configFile);
+      }
+
+      // Append co-owners if any
+      const validCoOwners = coOwners.filter(c => c.address && c.sharePercent > 0);
+      if (validCoOwners.length > 0) {
+        formData.append('coOwners', JSON.stringify(validCoOwners));
       }
 
       const res = await fetch(`${API_URL}/api/models/upload`, {
@@ -227,6 +235,67 @@ export default function UploadModel() {
           <div className="form-group">
             <label className="form-label">Rate Limit (requests/minute)</label>
             <input className="form-input" type="number" name="rateLimit" value={form.rateLimit} onChange={handleChange} min="1" max="100" />
+          </div>
+
+          {/* ─── CO-OWNERSHIP SECTION ─── */}
+          <div style={{ padding: '1rem', background: 'rgba(33,150,243,0.06)', borderRadius: '8px', border: '1px dashed rgba(33,150,243,0.3)', marginBottom: '1rem' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
+              <h4 style={{ margin: 0, color: '#64b5f6', fontSize: '0.95rem' }}>👥 Co-Ownership & Revenue Sharing</h4>
+              <button
+                type="button"
+                onClick={() => setCoOwners(prev => [...prev, { address: '', sharePercent: 10 }])}
+                style={{ background: 'rgba(33,150,243,0.15)', color: '#64b5f6', border: '1px solid rgba(33,150,243,0.3)', padding: '0.3rem 0.75rem', borderRadius: '6px', cursor: 'pointer', fontSize: '0.8rem', fontWeight: 'bold' }}
+              >
+                + Add Co-Owner
+              </button>
+            </div>
+
+            {coOwners.length === 0 && (
+              <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', margin: 0 }}>No co-owners added. You will retain 100% ownership.</p>
+            )}
+
+            {coOwners.map((co, idx) => (
+              <div key={idx} style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', marginBottom: '0.5rem' }}>
+                <input
+                  className="form-input"
+                  placeholder="0x... wallet address"
+                  value={co.address}
+                  onChange={(e) => {
+                    const updated = [...coOwners];
+                    updated[idx].address = e.target.value;
+                    setCoOwners(updated);
+                  }}
+                  style={{ flex: 3 }}
+                />
+                <input
+                  className="form-input"
+                  type="number"
+                  min="1"
+                  max="100"
+                  value={co.sharePercent}
+                  onChange={(e) => {
+                    const updated = [...coOwners];
+                    updated[idx].sharePercent = Number(e.target.value);
+                    setCoOwners(updated);
+                  }}
+                  style={{ flex: 1, textAlign: 'center' }}
+                />
+                <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)', minWidth: '15px' }}>%</span>
+                <button
+                  type="button"
+                  onClick={() => setCoOwners(prev => prev.filter((_, i) => i !== idx))}
+                  style={{ background: 'rgba(244,67,54,0.1)', color: '#ef5350', border: '1px solid rgba(244,67,54,0.3)', padding: '0.35rem 0.6rem', borderRadius: '6px', cursor: 'pointer', fontSize: '0.8rem' }}
+                >
+                  ✕
+                </button>
+              </div>
+            ))}
+
+            {coOwners.length > 0 && (
+              <div style={{ fontSize: '0.8rem', color: coOwners.reduce((s, c) => s + c.sharePercent, 0) > 100 ? '#ef5350' : '#00e676', marginTop: '0.25rem' }}>
+                Co-owner total: {coOwners.reduce((s, c) => s + c.sharePercent, 0)}% — Your share: {100 - coOwners.reduce((s, c) => s + c.sharePercent, 0)}%
+              </div>
+            )}
           </div>
 
           <div style={{ marginTop: '0.5rem', padding: '1rem', background: 'rgba(0, 230, 118, 0.08)', borderRadius: 'var(--radius-sm)', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
