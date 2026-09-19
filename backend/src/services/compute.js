@@ -85,7 +85,7 @@ export async function runInference(model, prompt, imageBase64 = null) {
         num_predict: 512,
       },
     }, {
-      timeout: 10000, // 10s timeout — falls back to simulation quickly if node is down
+      timeout: 120000, // 120s timeout — large models need time to load into memory on first use
     });
 
     const duration = Date.now() - startTime;
