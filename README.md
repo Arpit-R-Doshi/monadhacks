@@ -6,7 +6,17 @@ ECLIPSE.AI is a full-stack Web3 application that lets users browse, subscribe to
 
 ---
 
-## Features
+## Links
+
+- 🌐 **Live Website**: [https://monadhacks.vercel.app](https://monadhacks.vercel.app)
+- 🎥 **Demo Video**: [Watch on Google Drive](https://drive.google.com/file/d/1NZC-BOtwlzZleoywcuqikWXmhG25iZN_/view?usp=sharing)
+- 🐦 **Twitter Thread**: [View on X](https://x.com/arpitdoshi_/status/2101282846191300980?s=20)
+- 🔗 **Monad Explorer**:
+  - Model Registry: [0x2f02861ff42c0d04823dadd08326de0b07f57dfe](https://testnet.monadexplorer.com/address/0x2f02861ff42c0d04823dadd08326de0b07f57dfe)
+  - Payment Manager: [0xaa2499494b61d293a437c6bd31ca22b88d8aa9b2](https://testnet.monadexplorer.com/address/0xaa2499494b61d293a437c6bd31ca22b88d8aa9b2)
+  - Prompt Execution: [0x70dcf4d82c8e1b989d2a7a3c2303fa48a348d6c1](https://testnet.monadexplorer.com/address/0x70dcf4d82c8e1b989d2a7a3c2303fa48a348d6c1)
+
+---
 
 ### For Users
 - Browse an AI model marketplace with real-time pricing in MON tokens
