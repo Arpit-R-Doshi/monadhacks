@@ -22,6 +22,7 @@ import { healthCheck } from './services/compute.js';
 import modelRoutes from './routes/models.js';
 import executionRoutes from './routes/execution.js';
 import walletRoutes from './routes/wallet.js';
+import historyRoutes from './routes/history.js';
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -43,6 +44,7 @@ const blockchain = initBlockchain();
 app.use('/api/models', modelRoutes);
 app.use('/api/execute', executionRoutes);
 app.use('/api/wallet', walletRoutes);
+app.use('/api/history', historyRoutes);
 
 // Health check
 app.get('/api/health', async (req, res) => {

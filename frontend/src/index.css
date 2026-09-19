@@ -1030,3 +1030,136 @@ input, textarea, select {
   font-size: 0.8rem;
   border-top: 1px solid var(--border);
 }
+
+/* ===================== CHAT HISTORY ===================== */
+.history-page {
+  padding: 2rem;
+  max-width: 1400px;
+  margin: 0 auto;
+  flex: 1;
+}
+
+.history-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 2rem;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.history-header h1 {
+  font-size: 2rem;
+  font-weight: 800;
+}
+
+.history-layout {
+  display: grid;
+  grid-template-columns: 300px 1fr;
+  gap: 1.5rem;
+  height: calc(100vh - 240px);
+  min-height: 500px;
+}
+
+.history-sidebar {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.history-conv-item {
+  display: flex;
+  gap: 0.75rem;
+  padding: 1rem;
+  cursor: pointer;
+  border-bottom: 1px solid var(--border);
+  transition: background 0.15s;
+}
+
+.history-conv-item:last-child {
+  border-bottom: none;
+}
+
+.history-conv-item:hover {
+  background: var(--bg-glass);
+}
+
+.history-conv-item.active {
+  background: rgba(108, 43, 217, 0.12);
+  border-left: 2px solid var(--accent-primary);
+}
+
+.history-conv-item .conv-icon {
+  font-size: 1.4rem;
+  flex-shrink: 0;
+}
+
+.history-conv-item .conv-meta {
+  flex: 1;
+  min-width: 0;
+}
+
+.history-conv-item .conv-name {
+  font-weight: 600;
+  font-size: 0.9rem;
+  margin-bottom: 0.2rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.history-conv-item .conv-preview {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-bottom: 0.3rem;
+}
+
+.history-conv-item .conv-stats {
+  display: flex;
+  gap: 0.75rem;
+  font-size: 0.7rem;
+  color: var(--text-muted);
+}
+
+.history-thread {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.history-thread-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem 1.5rem;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.history-messages {
+  flex: 1;
+  overflow-y: auto;
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+}
+
+@media (max-width: 768px) {
+  .history-layout {
+    grid-template-columns: 1fr;
+    height: auto;
+  }
+  .history-sidebar {
+    max-height: 300px;
+  }
+}

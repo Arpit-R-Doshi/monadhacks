@@ -6,9 +6,10 @@ import { AppContext } from '../App.jsx';
 
 export default function ModelDetail() {
   const { id } = useParams();
-  const { wallet, balance, API_URL, connectWallet, refreshBalance } = useContext(AppContext);
+  const { wallet, balance, API_URL, refreshBalance } = useContext(AppContext);
   const [model, setModel] = useState(null);
   const [messages, setMessages] = useState([]);
+  const [historyLoaded, setHistoryLoaded] = useState(false);
   const [prompt, setPrompt] = useState('');
   const [imageFile, setImageFile] = useState(null);
   const [imageBase64, setImageBase64] = useState('');
@@ -18,7 +19,16 @@ export default function ModelDetail() {
 
   useEffect(() => {
     fetchModel();
+    setMessages([]);  // clear on model switch
+    setHistoryLoaded(false);
   }, [id]);
+
+  // Load chat history when wallet is connected
+  useEffect(() => {
+    if (wallet && id) {
+      loadHistory();
+    }
+  }, [wallet, id]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -32,6 +42,21 @@ export default function ModelDetail() {
     } catch (err) {
       console.error('Failed to fetch model:', err);
     }
+  };
+
+  const loadHistory = async () => {
+    try {
+      const res = await fetch(`${API_URL}/api/history/${wallet}/${id}`);
+      const data = await res.json();
+      if (data.success && data.messages.length > 0) {
+        // Mark historical messages so we can show a divider
+        const historical = data.messages.map(m => ({ ...m, historical: true }));
+        setMessages(historical);
+      }
+    } catch (err) {
+      console.error('Failed to load history:', err);
+    }
+    setHistoryLoaded(true);
   };
 
   const sendPrompt = async () => {
@@ -192,11 +217,26 @@ export default function ModelDetail() {
         </div>
 
         <div className="prompt-messages">
-          {messages.length === 0 && (
+          {messages.length === 0 && historyLoaded && (
             <div className="empty-state" style={{ padding: '2rem' }}>
               <div className="icon">💬</div>
               <h3>Start a conversation</h3>
               <p>Enter a prompt below to run inference on {model.name}</p>
+            </div>
+          )}
+          {messages.length === 0 && !historyLoaded && wallet && (
+            <div className="empty-state" style={{ padding: '2rem' }}>
+              <div className="loading-spinner" style={{ margin: '0 auto' }}></div>
+              <p style={{ marginTop: '1rem', color: 'var(--text-muted)' }}>Loading chat history...</p>
+            </div>
+          )}
+
+          {/* Historical messages separator */}
+          {messages.some(m => m.historical) && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', margin: '0.5rem 0' }}>
+              <div style={{ flex: 1, height: '1px', background: 'var(--border)' }} />
+              <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>📜 Previous conversation</span>
+              <div style={{ flex: 1, height: '1px', background: 'var(--border)' }} />
             </div>
           )}
 
