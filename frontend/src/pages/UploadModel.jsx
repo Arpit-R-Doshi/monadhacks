@@ -5,7 +5,7 @@ import toast from 'react-hot-toast';
 import { AppContext } from '../App.jsx';
 
 export default function UploadModel() {
-  const { wallet, API_URL, connectWallet } = useContext(AppContext);
+  const { wallet, API_URL } = useContext(AppContext);
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [form, setForm] = useState({
@@ -53,7 +53,7 @@ export default function UploadModel() {
       const data = await res.json();
       if (data.success) {
         toast.success('Model registered successfully!');
-        navigate('/marketplace');
+        navigate('/owner');
       } else {
         toast.error(data.error || 'Upload failed');
       }
@@ -70,7 +70,6 @@ export default function UploadModel() {
           <div className="icon">🔒</div>
           <h3>Connect your wallet to upload models</h3>
           <p style={{ marginBottom: '1.5rem' }}>You need a connected wallet to register model ownership</p>
-          <button className="btn btn-primary" onClick={connectWallet}>🦊 Connect Wallet</button>
         </div>
       </div>
     );

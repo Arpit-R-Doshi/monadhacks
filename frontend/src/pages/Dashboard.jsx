@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 import { AppContext } from '../App.jsx';
 
 export default function Dashboard() {
-  const { wallet, balance, API_URL, connectWallet } = useContext(AppContext);
+  const { wallet, balance, API_URL } = useContext(AppContext);
   const [prompts, setPrompts] = useState([]);
   const [health, setHealth] = useState(null);
 
@@ -39,7 +39,6 @@ export default function Dashboard() {
           <div className="icon">🔒</div>
           <h3>Connect your wallet to view dashboard</h3>
           <p style={{ marginBottom: '1.5rem' }}>View your usage history, balance, and transaction records</p>
-          <button className="btn btn-primary" onClick={connectWallet}>🦊 Connect Wallet</button>
         </div>
       </div>
     );

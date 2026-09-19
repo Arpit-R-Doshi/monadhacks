@@ -8,6 +8,8 @@ import ModelDetail from './pages/ModelDetail.jsx';
 import Dashboard from './pages/Dashboard.jsx';
 import UploadModel from './pages/UploadModel.jsx';
 import ChatHistory from './pages/ChatHistory.jsx';
+import RoleSelect from './pages/RoleSelect.jsx';
+import OwnerDashboard from './pages/OwnerDashboard.jsx';
 import { useAccount } from 'wagmi';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
@@ -18,7 +20,18 @@ function App() {
   const [wallet, setWallet] = useState(null);
   const [balance, setBalance] = useState(0);
   const [loading, setLoading] = useState(false);
+  const [userRole, setUserRole] = useState(() => localStorage.getItem('syn3rgy_role') || null);
   const { address, isConnected } = useAccount();
+
+  // Persist role to localStorage
+  const handleSetRole = (role) => {
+    setUserRole(role);
+    if (role) {
+      localStorage.setItem('syn3rgy_role', role);
+    } else {
+      localStorage.removeItem('syn3rgy_role');
+    }
+  };
 
   const syncBackendWallet = async (addr) => {
     try {
@@ -84,6 +97,7 @@ function App() {
   const contextValue = {
     wallet, balance, loading, setLoading,
     refreshBalance, claimFaucet,
+    userRole, setUserRole: handleSetRole,
     API_URL,
   };
 
@@ -100,11 +114,15 @@ function App() {
         <Navbar />
         <Routes>
           <Route path="/" element={<Landing />} />
+          <Route path="/login" element={<RoleSelect />} />
+          {/* User routes */}
           <Route path="/marketplace" element={<Marketplace />} />
           <Route path="/model/:id" element={<ModelDetail />} />
           <Route path="/dashboard" element={<Dashboard />} />
-          <Route path="/upload" element={<UploadModel />} />
           <Route path="/history" element={<ChatHistory />} />
+          {/* Owner routes */}
+          <Route path="/owner" element={<OwnerDashboard />} />
+          <Route path="/owner/upload" element={<UploadModel />} />
         </Routes>
         <footer className="footer">
           <p>© 2026 SYN3RGY — Decentralized AI Model Marketplace | Built on Polygon Amoy</p>

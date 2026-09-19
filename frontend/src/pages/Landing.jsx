@@ -4,7 +4,7 @@ import { motion } from 'framer-motion';
 import { AppContext } from '../App.jsx';
 
 export default function Landing() {
-  const { wallet, connectWallet } = useContext(AppContext);
+  const { wallet } = useContext(AppContext);
 
   const features = [
     { icon: '🔐', title: 'Encrypted Model Storage', desc: 'All models are AES-256 encrypted before being stored on IPFS. Only authorized compute nodes can decrypt and run inference.' },
@@ -53,14 +53,12 @@ export default function Landing() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, delay: 0.3 }}
         >
-          <Link to="/marketplace" className="btn btn-primary btn-lg">
-            🚀 Explore Models
+          <Link to="/login" className="btn btn-primary btn-lg">
+            🚀 Get Started
           </Link>
-          {!wallet && (
-            <button className="btn btn-secondary btn-lg" onClick={connectWallet}>
-              🦊 Connect Wallet
-            </button>
-          )}
+          <Link to="/marketplace" className="btn btn-secondary btn-lg">
+            🔍 Browse Models
+          </Link>
         </motion.div>
 
         <motion.div

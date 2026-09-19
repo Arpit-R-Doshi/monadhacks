@@ -49,7 +49,7 @@ export async function runInference(modelName, prompt) {
         num_predict: 512,
       },
     }, {
-      timeout: 120000, // 2 min timeout
+      timeout: 10000, // 10s timeout — falls back to simulation quickly if node is down
     });
 
     const duration = Date.now() - startTime;
@@ -68,7 +68,7 @@ export async function runInference(modelName, prompt) {
     };
   } catch (err) {
     // If Ollama is not available, return a simulated response
-    if (err.code === 'ECONNREFUSED' || err.code === 'ECONNABORTED') {
+    if (['ECONNREFUSED', 'ECONNABORTED', 'ETIMEDOUT', 'ENOTFOUND'].includes(err.code) || err.response === undefined) {
       console.log('[Compute-SIM] Ollama not available, simulating response');
       return simulateInference(modelName, prompt);
     }
