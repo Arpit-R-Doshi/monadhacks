@@ -23,6 +23,7 @@ import modelRoutes from './routes/models.js';
 import executionRoutes from './routes/execution.js';
 import walletRoutes from './routes/wallet.js';
 import historyRoutes from './routes/history.js';
+import subscriptionRoutes from './routes/subscriptions.js';
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -45,6 +46,7 @@ app.use('/api/models', modelRoutes);
 app.use('/api/execute', executionRoutes);
 app.use('/api/wallet', walletRoutes);
 app.use('/api/history', historyRoutes);
+app.use('/api/subscriptions', subscriptionRoutes);
 
 // Health check
 app.get('/api/health', async (req, res) => {
@@ -85,7 +87,7 @@ app.get('/api/seed', async (req, res) => {
       description: 'Google\'s lightweight open model. Fast and efficient for general text generation, summarization, and Q&A tasks. Ideal for quick responses with low latency.',
       category: 'text-generation',
       ipfsCid: 'QmDemo_Gemma2B_Encrypted_Model_CID',
-      ownerAddress: '0xDemoOwner1',
+      ownerAddress: '0x1A75CcaDFC93368D0F8CeD43786D9aC0CC2E5faa',
       ollamaModel: 'gemma:2b',
       pricePerUse: 1,
       subscriptionPrice: 10,

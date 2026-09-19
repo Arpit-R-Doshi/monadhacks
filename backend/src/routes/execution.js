@@ -5,7 +5,7 @@ import { uploadToIPFS } from '../services/ipfs.js';
 import { createPromptOnChain, submitResponseOnChain } from '../services/blockchain.js';
 import { runInference, healthCheck } from '../services/compute.js';
 import { processImageAndExtractText } from '../services/vision.js';
-import { getModelById, savePrompt, updatePromptResponse, getPromptsByUser, checkRateLimit, incrementModelUses, getOrCreateUser, updateUserBalance } from '../db/sqlite.js';
+import { getModelById, savePrompt, updatePromptResponse, getPromptsByUser, checkRateLimit, incrementModelUses, getOrCreateUser, updateUserBalance, getSubscription, updateSubscriptionTokens } from '../db/sqlite.js';
 
 const router = Router();
 
@@ -32,10 +32,16 @@ router.post('/', async (req, res) => {
       return res.status(429).json({ error: `Rate limit exceeded. Max ${model.rate_limit} requests/minute.` });
     }
 
-    // 3. Check user balance
+    // 3. Check for active subscription
     const user = getOrCreateUser(userAddress);
-    if (user.balance < model.price_per_use) {
-      return res.status(402).json({ error: 'Insufficient SYN balance', balance: user.balance, required: model.price_per_use });
+    const sub = getSubscription(userAddress, modelId);
+    
+    if (!sub) {
+      return res.status(403).json({ error: 'Active subscription required to use this model.' });
+    } else {
+      if (sub.tokens_used >= sub.tokens_allocated) {
+        return res.status(402).json({ error: 'Subscription token limit reached for this month.' });
+      }
     }
 
     let finalPrompt = prompt;
@@ -95,8 +101,9 @@ router.post('/', async (req, res) => {
     const computeNodeAddress = process.env.COMPUTE_NODE_ADDRESS || '0x0000000000000000000000000000000000000000';
     const responseChainResult = await submitResponseOnChain(promptId, computeNodeAddress, responseCid, inferenceResult.outputTokens);
 
-    // 12. Deduct payment
-    updateUserBalance(userAddress, -model.price_per_use);
+    // 12. Deduct tokens
+    const totalTokens = inferenceResult.inputTokens + inferenceResult.outputTokens;
+    updateSubscriptionTokens(sub.id, totalTokens);
     incrementModelUses(modelId);
 
     // 13. Update prompt in DB

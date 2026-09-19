@@ -14,6 +14,12 @@ export default function ModelDetail() {
   const [imageFile, setImageFile] = useState(null);
   const [imageBase64, setImageBase64] = useState('');
   const [sending, setSending] = useState(false);
+  
+  // Subscription state
+  const [subscribed, setSubscribed] = useState(false);
+  const [subDetails, setSubDetails] = useState(null);
+  const [subscribing, setSubscribing] = useState(false);
+  
   const messagesEndRef = useRef(null);
   const fileInputRef = useRef(null);
 
@@ -23,10 +29,11 @@ export default function ModelDetail() {
     setHistoryLoaded(false);
   }, [id]);
 
-  // Load chat history when wallet is connected
+  // Load chat history and check subscription when wallet is connected
   useEffect(() => {
     if (wallet && id) {
       loadHistory();
+      checkSubscription();
     }
   }, [wallet, id]);
 
@@ -42,6 +49,51 @@ export default function ModelDetail() {
     } catch (err) {
       console.error('Failed to fetch model:', err);
     }
+  };
+
+  const checkSubscription = async () => {
+    try {
+      const res = await fetch(`${API_URL}/api/subscriptions/check/${wallet}/${id}`);
+      const data = await res.json();
+      if (data.success && data.subscribed) {
+        setSubscribed(true);
+        setSubDetails(data.subscription);
+      } else {
+        setSubscribed(false);
+        setSubDetails(null);
+      }
+    } catch (err) {
+      console.error('Failed to check subscription:', err);
+    }
+  };
+
+  const handleSubscribe = async () => {
+    if (!wallet) {
+      toast.error('Connect your wallet first');
+      return;
+    }
+    
+    setSubscribing(true);
+    try {
+      const res = await fetch(`${API_URL}/api/subscriptions/subscribe`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userAddress: wallet, modelId: id }),
+      });
+      const data = await res.json();
+      
+      if (data.success) {
+        toast.success(data.message);
+        setSubscribed(true);
+        refreshBalance();
+        checkSubscription();
+      } else {
+        toast.error(data.error || 'Subscription failed');
+      }
+    } catch (err) {
+      toast.error('Network error during subscription');
+    }
+    setSubscribing(false);
   };
 
   const loadHistory = async () => {
@@ -179,7 +231,11 @@ export default function ModelDetail() {
 
           <div className="detail-stats">
             <div className="detail-stat">
-              <div className="label">Price</div>
+              <div className="label">Monthly Sub</div>
+              <div className="value" style={{ color: '#a78bfa' }}>{model.subscription_price} SYN</div>
+            </div>
+            <div className="detail-stat">
+              <div className="label">Pay Per Use</div>
               <div className="value" style={{ color: '#a78bfa' }}>{model.price_per_use} SYN</div>
             </div>
             <div className="detail-stat">
@@ -208,11 +264,19 @@ export default function ModelDetail() {
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.2 }}
       >
-        <div className="prompt-header">
-          <h3>💬 Run Inference</h3>
-          <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-            {wallet && <span className="balance-badge">💎 {balance.toFixed(1)} SYN</span>}
+        <div className="prompt-header" style={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem' }}>
+          <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+            <h3>💬 Run Inference</h3>
             <span className="status-badge completed">● Live</span>
+          </div>
+          
+          <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+            {subDetails && (
+               <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                 Tokens remaining: <span style={{ color: 'var(--text)', fontWeight: 'bold' }}>{subDetails.tokens_allocated - subDetails.tokens_used}</span> / {subDetails.tokens_allocated}
+               </div>
+            )}
+            {wallet && <span className="balance-badge">💎 {balance.toFixed(1)} SYN</span>}
           </div>
         </div>
 
@@ -294,51 +358,70 @@ export default function ModelDetail() {
           <div ref={messagesEndRef} />
         </div>
 
-        <div className="prompt-input-container" style={{ position: 'relative' }}>
-          {imageBase64 && (
-            <div className="image-preview" style={{ padding: '0.5rem', background: 'var(--bg-glass)', borderRadius: '8px 8px 0 0', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <img src={imageBase64} alt="Preview" style={{ height: '40px', borderRadius: '4px' }} />
-              <span style={{ fontSize: '0.8rem', color: 'var(--text-dim)' }}>{imageFile?.name}</span>
-              <button 
-                onClick={() => { setImageFile(null); setImageBase64(''); }}
-                style={{ marginLeft: 'auto', background: 'none', border: 'none', color: 'var(--error)', cursor: 'pointer' }}
-              >✕</button>
-            </div>
-          )}
-          <div className="prompt-input" style={{ borderRadius: imageBase64 ? '0 0 8px 8px' : '8px' }}>
-              <button
-                className="upload-btn"
-                onClick={() => fileInputRef.current?.click()}
+        {(!wallet || subscribed) ? (
+          <div className="prompt-input-container" style={{ position: 'relative' }}>
+            {imageBase64 && (
+              <div className="image-preview" style={{ padding: '0.5rem', background: 'var(--bg-glass)', borderRadius: '8px 8px 0 0', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <img src={imageBase64} alt="Preview" style={{ height: '40px', borderRadius: '4px' }} />
+                <span style={{ fontSize: '0.8rem', color: 'var(--text-dim)' }}>{imageFile?.name}</span>
+                <button 
+                  onClick={() => { setImageFile(null); setImageBase64(''); }}
+                  style={{ marginLeft: 'auto', background: 'none', border: 'none', color: 'var(--error)', cursor: 'pointer' }}
+                >✕</button>
+              </div>
+            )}
+            <div className="prompt-input" style={{ borderRadius: imageBase64 ? '0 0 8px 8px' : '8px' }}>
+                <button
+                  className="upload-btn"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={!wallet || sending}
+                  style={{ background: 'none', border: 'none', color: 'var(--text-dim)', fontSize: '1.2rem', cursor: 'pointer', padding: '0 0.5rem' }}
+                  title="Attach Image"
+                >
+                  📸
+                </button>
+              <input
+                type="file"
+                ref={fileInputRef}
+                accept="image/*"
+                style={{ display: 'none' }}
+                onChange={handleImageUpload}
+              />
+              <textarea
+                value={prompt}
+                onChange={(e) => setPrompt(e.target.value)}
+                onKeyDown={handleKeyDown}
+                placeholder={wallet ? `Ask ${model.name} anything...` : 'Connect wallet to start...'}
                 disabled={!wallet || sending}
-                style={{ background: 'none', border: 'none', color: 'var(--text-dim)', fontSize: '1.2rem', cursor: 'pointer', padding: '0 0.5rem' }}
-                title="Attach Image"
+                rows={1}
+              />
+              <button
+                className="send-btn"
+                onClick={sendPrompt}
+                disabled={!wallet || !prompt.trim() || sending}
               >
-                📸
+                {sending ? '⏳' : '↑'}
               </button>
-            <input
-              type="file"
-              ref={fileInputRef}
-              accept="image/*"
-              style={{ display: 'none' }}
-              onChange={handleImageUpload}
-            />
-            <textarea
-              value={prompt}
-              onChange={(e) => setPrompt(e.target.value)}
-              onKeyDown={handleKeyDown}
-              placeholder={wallet ? `Ask ${model.name} anything...` : 'Connect wallet to start...'}
-              disabled={!wallet || sending}
-              rows={1}
-            />
-            <button
-              className="send-btn"
-              onClick={sendPrompt}
-              disabled={!wallet || !prompt.trim() || sending}
+            </div>
+          </div>
+        ) : (
+          <div className="subscription-prompt card" style={{ padding: '2rem', textAlign: 'center', marginTop: '1rem', border: '1px solid var(--accent-primary)', background: 'rgba(108, 43, 217, 0.05)' }}>
+            <h3>Subscribe to {model.name}</h3>
+            <p style={{ margin: '1rem 0', color: 'var(--text-secondary)' }}>You need an active subscription to run inference on this model. A subscription gives you 50,000 tokens for 30 days.</p>
+            <div style={{ display: 'flex', justifyContent: 'center', gap: '1rem', alignItems: 'center', marginBottom: '1.5rem' }}>
+              <span style={{ fontSize: '1.5rem', fontWeight: 'bold' }}>{model.subscription_price} SYN</span>
+              <span style={{ color: 'var(--text-muted)' }}>/ month</span>
+            </div>
+            <button 
+              className="btn btn-primary btn-lg" 
+              onClick={handleSubscribe} 
+              disabled={subscribing}
+              style={{ width: '100%', maxWidth: '300px' }}
             >
-              {sending ? '⏳' : '↑'}
+              {subscribing ? 'Processing...' : 'Subscribe Now'}
             </button>
           </div>
-        </div>
+        )}
       </motion.div>
     </div>
   );

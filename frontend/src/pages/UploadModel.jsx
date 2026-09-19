@@ -13,7 +13,6 @@ export default function UploadModel() {
     description: '',
     category: 'text-generation',
     ollamaModel: 'gemma:2b',
-    pricePerUse: 1,
     subscriptionPrice: 10,
     rateLimit: 10,
   });
@@ -43,8 +42,8 @@ export default function UploadModel() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           ...form,
+          ollamaModel: form.ollamaModel,
           ownerAddress: wallet,
-          pricePerUse: Number(form.pricePerUse),
           subscriptionPrice: Number(form.subscriptionPrice),
           rateLimit: Number(form.rateLimit),
         }),
@@ -115,12 +114,7 @@ export default function UploadModel() {
           </div>
 
           <div className="form-row">
-            <div className="form-group">
-              <label className="form-label">Price per Use (SYN)</label>
-              <input className="form-input" type="number" name="pricePerUse" value={form.pricePerUse} onChange={handleChange} min="0" step="0.1" />
-            </div>
-
-            <div className="form-group">
+            <div className="form-group" style={{ width: '100%' }}>
               <label className="form-label">Subscription Price (SYN/month)</label>
               <input className="form-input" type="number" name="subscriptionPrice" value={form.subscriptionPrice} onChange={handleChange} min="0" step="1" />
             </div>

@@ -9,7 +9,7 @@ export default function Landing() {
   const features = [
     { icon: '🔐', title: 'Encrypted Model Storage', desc: 'All models are AES-256 encrypted before being stored on IPFS. Only authorized compute nodes can decrypt and run inference.' },
     { icon: '⛓️', title: 'Blockchain Ownership', desc: 'Model ownership is linked to your wallet address. Immutable metadata and ownership records stored on Polygon Amoy.' },
-    { icon: '💰', title: 'Transparent Payments', desc: 'Pay-per-use and subscription models. Smart contracts handle revenue splitting: 85% owner, 10% compute, 5% platform.' },
+    { icon: '💰', title: 'Transparent Payments', desc: 'Secure monthly subscriptions. Smart contracts handle revenue tracking without hidden fees.' },
     { icon: '🌐', title: 'Decentralized Storage', desc: 'Models stored on IPFS with only CIDs and metadata on-chain. No single point of failure or censorship.' },
     { icon: '⚡', title: 'Compute Network', desc: 'Distributed compute nodes run model inference. Nodes are incentivized with SYN token rewards.' },
     { icon: '🔍', title: 'Full Transparency', desc: 'Every prompt, response, and payment is recorded on the blockchain. No hidden fees or intermediaries.' },

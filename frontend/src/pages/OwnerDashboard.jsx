@@ -8,12 +8,14 @@ export default function OwnerDashboard() {
   const navigate = useNavigate();
   const [models, setModels] = useState([]);
   const [health, setHealth] = useState(null);
+  const [subStats, setSubStats] = useState({ subscribers: [], tokens: [] });
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (wallet) {
       fetchMyModels();
       fetchHealth();
+      fetchSubStats();
     } else {
       setLoading(false);
     }
@@ -44,6 +46,18 @@ export default function OwnerDashboard() {
     }
   };
 
+  const fetchSubStats = async () => {
+    try {
+      const res = await fetch(`${API_URL}/api/subscriptions/owner/${wallet}`);
+      const data = await res.json();
+      if (data.success) {
+        setSubStats(data.stats);
+      }
+    } catch (err) {
+      console.error('Sub stats error:', err);
+    }
+  };
+
   const getModelIcon = (name) => {
     if (name?.toLowerCase().includes('gemma')) return '💎';
     if (name?.toLowerCase().includes('llama')) return '🦙';
@@ -52,6 +66,7 @@ export default function OwnerDashboard() {
 
   const totalEarnings = models.reduce((sum, m) => sum + (m.total_uses * m.price_per_use), 0);
   const totalUses = models.reduce((sum, m) => sum + (m.total_uses || 0), 0);
+  const totalSubs = subStats.subscribers.reduce((sum, s) => sum + s.count, 0);
 
   if (!wallet) {
     return (
@@ -83,6 +98,12 @@ export default function OwnerDashboard() {
           <div className="stat-icon" style={{ background: 'rgba(108,43,217,0.15)', color: '#a78bfa' }}>🤖</div>
           <div className="stat-value">{models.length}</div>
           <div className="stat-label">Your Models</div>
+        </motion.div>
+        
+        <motion.div className="card stat-card" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
+          <div className="stat-icon" style={{ background: 'rgba(33,150,243,0.15)', color: '#64b5f6' }}>👥</div>
+          <div className="stat-value">{totalSubs}</div>
+          <div className="stat-label">Active Subscribers</div>
         </motion.div>
 
         <motion.div className="card stat-card" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
@@ -169,12 +190,12 @@ export default function OwnerDashboard() {
 
                   <div className="model-stats">
                     <div className="model-stat-item">
-                      <span>📊</span>
-                      <span className="value">{model.total_uses}</span> uses
+                      <span>👥</span>
+                      <span className="value">{subStats.subscribers.find(s => s.model_id === model.id)?.count || 0}</span> subs
                     </div>
                     <div className="model-stat-item">
-                      <span>💰</span>
-                      <span className="value">{(model.total_uses * model.price_per_use).toFixed(1)}</span> SYN earned
+                      <span>🔥</span>
+                      <span className="value">{subStats.tokens.find(s => s.model_id === model.id)?.total_burnt || 0}</span> burnt
                     </div>
                     <div className="model-stat-item">
                       <span>⚡</span>
@@ -184,8 +205,8 @@ export default function OwnerDashboard() {
 
                   <div className="model-footer">
                     <div className="model-price">
-                      <span className="amount">{model.price_per_use}</span>
-                      <span className="unit">SYN / use</span>
+                      <span className="amount">{model.subscription_price}</span>
+                      <span className="unit">SYN / mo</span>
                     </div>
                     <Link to={`/model/${model.id}`} className="btn btn-primary btn-sm">View Chat →</Link>
                   </div>

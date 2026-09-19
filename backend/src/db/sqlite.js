@@ -62,6 +62,17 @@ export function initDB() {
       window_start DATETIME DEFAULT CURRENT_TIMESTAMP,
       PRIMARY KEY (user_address, model_id)
     );
+
+    CREATE TABLE IF NOT EXISTS subscriptions (
+      id TEXT PRIMARY KEY,
+      user_address TEXT,
+      model_id TEXT,
+      tokens_allocated INTEGER,
+      tokens_used INTEGER DEFAULT 0,
+      status TEXT DEFAULT 'active',
+      expires_at DATETIME,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
   `);
 
   console.log('[DB] SQLite initialized at', DB_PATH);
@@ -150,4 +161,55 @@ export function checkRateLimit(userAddress, modelId, limit) {
 
 export function incrementModelUses(modelId) {
   db.prepare('UPDATE models SET total_uses = total_uses + 1 WHERE id = ?').run(modelId);
+}
+
+// Subscription operations
+export function createSubscription(sub) {
+  const stmt = db.prepare(`
+    INSERT INTO subscriptions (id, user_address, model_id, tokens_allocated, expires_at)
+    VALUES (?, ?, ?, ?, datetime('now', '+30 days'))
+  `);
+  return stmt.run(sub.id, sub.userAddress, sub.modelId, sub.tokensAllocated);
+}
+
+export function getSubscription(userAddress, modelId) {
+  return db.prepare(`
+    SELECT * FROM subscriptions 
+    WHERE user_address = ? AND model_id = ? AND status = 'active' AND expires_at > datetime('now')
+    ORDER BY created_at DESC LIMIT 1
+  `).get(userAddress, modelId);
+}
+
+export function getUserSubscriptions(userAddress) {
+  return db.prepare(`
+    SELECT s.*, m.name as model_name, m.ipfs_cid, m.owner_address
+    FROM subscriptions s
+    JOIN models m ON s.model_id = m.id
+    WHERE s.user_address = ? AND s.status = 'active'
+    ORDER BY s.created_at DESC
+  `).all(userAddress);
+}
+
+export function getOwnerSubscriptionStats(ownerAddress) {
+  const subscribers = db.prepare(`
+    SELECT count(DISTINCT s.user_address) as count, s.model_id
+    FROM subscriptions s
+    JOIN models m ON s.model_id = m.id
+    WHERE m.owner_address = ? AND s.status = 'active' AND s.expires_at > datetime('now')
+    GROUP BY s.model_id
+  `).all(ownerAddress);
+
+  const tokens = db.prepare(`
+    SELECT sum(s.tokens_allocated) as total_allocated, sum(s.tokens_used) as total_burnt, s.model_id
+    FROM subscriptions s
+    JOIN models m ON s.model_id = m.id
+    WHERE m.owner_address = ?
+    GROUP BY s.model_id
+  `).all(ownerAddress);
+
+  return { subscribers, tokens };
+}
+
+export function updateSubscriptionTokens(id, tokensUsed) {
+  db.prepare('UPDATE subscriptions SET tokens_used = tokens_used + ? WHERE id = ?').run(tokensUsed, id);
 }
