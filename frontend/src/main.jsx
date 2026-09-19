@@ -50,6 +50,20 @@ const config = getDefaultConfig({
 
 const queryClient = new QueryClient();
 
+// Patch fetch to always bypass ngrok's browser warning for API calls
+const originalFetch = window.fetch;
+window.fetch = async (...args) => {
+  let [resource, config] = args;
+  if (typeof resource === 'string' && resource.includes('ngrok-free.dev')) {
+    config = config || {};
+    config.headers = {
+      ...config.headers,
+      'ngrok-skip-browser-warning': 'true'
+    };
+  }
+  return originalFetch(resource, config);
+};
+
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
     <WagmiProvider config={config}>
