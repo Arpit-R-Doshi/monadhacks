@@ -44,11 +44,13 @@ router.post('/sync', async (req, res) => {
 
     // Create Subscription internally for fast dashboard querying
     const subId = uuidv4();
+    const txHash = req.body.txHash || '';
     createSubscription({
       id: subId,
       userAddress,
       modelId,
       tokensAllocated: 50000,
+      txHash,
     });
 
     // Deduct the subscription price from the user's platform balance
@@ -67,6 +69,7 @@ router.post('/sync', async (req, res) => {
     res.json({
       success: true,
       subscriptionId: subId,
+      txHash,
       message: 'Subscription fully synchronized to read-index.'
     });
 
@@ -78,12 +81,18 @@ router.post('/sync', async (req, res) => {
 
 /**
  * GET /api/subscriptions/user/:address
- * Get all active subscriptions for a user
+ * Get all subscriptions (purchase history) for a user
  */
 router.get('/user/:address', (req, res) => {
   try {
-    const subs = getUserSubscriptions(req.params.address);
-    res.json({ success: true, subscriptions: subs });
+    const rawSubs = getUserSubscriptions(req.params.address);
+    const subscriptions = rawSubs.map(s => ({
+      ...s,
+      explorerUrl: s.tx_hash && !s.tx_hash.startsWith('0x_')
+        ? `https://testnet.monadexplorer.com/tx/${s.tx_hash}`
+        : null,
+    }));
+    res.json({ success: true, subscriptions });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

@@ -208,6 +208,17 @@ export function initDB() {
     console.error('[DB] withdrawals migration failed:', err.message);
   }
 
+  // Add on-chain tx_hash column to subscriptions table if not present
+  try {
+    const subCols = db.pragma('table_info(subscriptions)');
+    if (!subCols.some(c => c.name === 'tx_hash')) {
+      db.exec(`ALTER TABLE subscriptions ADD COLUMN tx_hash TEXT;`);
+      console.log('[DB] Added tx_hash column to subscriptions table.');
+    }
+  } catch (err) {
+    console.error('[DB] subscriptions migration failed:', err.message);
+  }
+
   return db;
 }
 
@@ -261,7 +272,13 @@ export function updatePromptResponse(promptId, response) {
 }
 
 export function getPromptsByUser(userAddress) {
-  return db.prepare('SELECT * FROM prompts WHERE user_address = ? ORDER BY created_at DESC LIMIT 50').all(userAddress);
+  return db.prepare(`
+    SELECT p.*, m.name as model_name, m.category as model_category, m.price_per_use
+    FROM prompts p
+    LEFT JOIN models m ON p.model_id = m.id
+    WHERE LOWER(p.user_address) = ?
+    ORDER BY p.created_at DESC LIMIT 100
+  `).all(userAddress.toLowerCase());
 }
 
 // User operations
@@ -309,10 +326,10 @@ export function incrementModelUses(modelId) {
 // Subscription operations
 export function createSubscription(sub) {
   const stmt = db.prepare(`
-    INSERT INTO subscriptions (id, user_address, model_id, tokens_allocated, expires_at)
-    VALUES (?, ?, ?, ?, datetime('now', '+30 days'))
+    INSERT INTO subscriptions (id, user_address, model_id, tokens_allocated, tx_hash, expires_at)
+    VALUES (?, ?, ?, ?, ?, datetime('now', '+30 days'))
   `);
-  return stmt.run(sub.id, sub.userAddress, sub.modelId, sub.tokensAllocated);
+  return stmt.run(sub.id, sub.userAddress.toLowerCase(), sub.modelId, sub.tokensAllocated, sub.txHash || '');
 }
 
 export function getSubscription(userAddress, modelId) {
@@ -325,12 +342,69 @@ export function getSubscription(userAddress, modelId) {
 
 export function getUserSubscriptions(userAddress) {
   return db.prepare(`
-    SELECT s.*, m.name as model_name, m.ipfs_cid, m.owner_address
+    SELECT s.*, m.name as model_name, m.ipfs_cid, m.owner_address, m.subscription_price, m.price_per_use, m.category
     FROM subscriptions s
     JOIN models m ON s.model_id = m.id
-    WHERE s.user_address = ? AND s.status = 'active'
+    WHERE LOWER(s.user_address) = ?
     ORDER BY s.created_at DESC
-  `).all(userAddress);
+  `).all(userAddress.toLowerCase());
+}
+
+/**
+ * Get comprehensive token usage summary across inferences and subscriptions
+ */
+export function getUserTokenUsageSummary(userAddress) {
+  const addr = userAddress.toLowerCase();
+
+  const tokenStats = db.prepare(`
+    SELECT 
+      COUNT(*) as total_inferences,
+      COALESCE(SUM(input_tokens), 0) as total_input_tokens,
+      COALESCE(SUM(output_tokens), 0) as total_output_tokens,
+      COALESCE(SUM(input_tokens + output_tokens), 0) as total_tokens,
+      COALESCE(AVG(duration_ms), 0) as avg_latency_ms
+    FROM prompts
+    WHERE LOWER(user_address) = ?
+  `).get(addr);
+
+  const perModelStats = db.prepare(`
+    SELECT 
+      p.model_id,
+      COALESCE(m.name, p.model_id) as model_name,
+      COUNT(*) as count,
+      COALESCE(SUM(p.input_tokens), 0) as input_tokens,
+      COALESCE(SUM(p.output_tokens), 0) as output_tokens,
+      COALESCE(SUM(p.input_tokens + p.output_tokens), 0) as total_tokens
+    FROM prompts p
+    LEFT JOIN models m ON p.model_id = m.id
+    WHERE LOWER(p.user_address) = ?
+    GROUP BY p.model_id
+    ORDER BY total_tokens DESC
+  `).all(addr);
+
+  const subStats = db.prepare(`
+    SELECT 
+      COUNT(*) as total_subscriptions,
+      COALESCE(SUM(tokens_allocated), 0) as total_allocated_tokens,
+      COALESCE(SUM(tokens_used), 0) as total_consumed_tokens,
+      COALESCE(SUM(m.subscription_price), 0) as total_mon_spent
+    FROM subscriptions s
+    LEFT JOIN models m ON s.model_id = m.id
+    WHERE LOWER(s.user_address) = ?
+  `).get(addr);
+
+  return {
+    inferences: tokenStats?.total_inferences || 0,
+    totalInputTokens: tokenStats?.total_input_tokens || 0,
+    totalOutputTokens: tokenStats?.total_output_tokens || 0,
+    totalTokens: tokenStats?.total_tokens || 0,
+    avgLatencyMs: Math.round(tokenStats?.avg_latency_ms || 0),
+    totalSubscriptions: subStats?.total_subscriptions || 0,
+    totalAllocatedTokens: subStats?.total_allocated_tokens || 0,
+    totalConsumedTokens: subStats?.total_consumed_tokens || 0,
+    totalMonSpent: Number((subStats?.total_mon_spent || 0).toFixed(2)),
+    perModelBreakdown: perModelStats || [],
+  };
 }
 
 export function getOwnerSubscriptionStats(ownerAddress) {

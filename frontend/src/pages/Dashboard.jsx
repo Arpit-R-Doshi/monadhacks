@@ -622,9 +622,25 @@ console.log("Remaining balance:", data.eclipse.remaining_balance, "MON");`,
 
       {/* (Moved Active Subscriptions) */}
 
-      {/* Transaction History */}
+      {/* Transaction & Token Usage History */}
       <motion.div className="card" style={{ padding: '1.5rem' }} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.5 }}>
-        <h3 style={{ marginBottom: '1rem', fontSize: '1rem' }}>Prompt History</h3>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', flexWrap: 'wrap', gap: '0.5rem' }}>
+          <div>
+            <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 700 }}>Prompt & Token Usage History</h3>
+            <p style={{ margin: '0.2rem 0 0 0', fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+              On-chain inference records with input & output token breakdown
+            </p>
+          </div>
+          <Link
+            to="/history"
+            style={{
+              fontSize: '0.8rem', color: '#a78bfa', textDecoration: 'none', fontWeight: 600,
+              background: 'rgba(139,92,246,0.15)', padding: '0.35rem 0.75rem', borderRadius: '6px',
+            }}
+          >
+            View Full History & Purchases →
+          </Link>
+        </div>
 
         {prompts.length === 0 ? (
           <div className="empty-state" style={{ padding: '2rem' }}>
@@ -637,35 +653,72 @@ console.log("Remaining balance:", data.eclipse.remaining_balance, "MON");`,
                 <tr>
                   <th>Model</th>
                   <th>Prompt</th>
-                  <th>Tokens</th>
+                  <th>Input</th>
+                  <th>Output</th>
+                  <th>Total Tokens</th>
+                  <th>Latency</th>
                   <th>Status</th>
-                  <th>IPFS CID</th>
+                  <th>Proof</th>
                   <th>Time</th>
                 </tr>
               </thead>
               <tbody>
-                {prompts.map((p) => (
-                  <tr key={p.id}>
-                    <td style={{ fontWeight: 600 }}>{p.model_id?.split('-')[0]}</td>
-                    <td style={{ maxWidth: '200px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      {p.prompt_text}
-                    </td>
-                    <td>{p.input_tokens + p.output_tokens}</td>
-                    <td>
-                      <span className={`status-badge ${p.status}`}>
-                        {p.status === 'completed' ? '✓' : '⏳'} {p.status}
-                      </span>
-                    </td>
-                    <td>
-                      {p.encrypted_prompt_cid && (
-                        <span className="tx-hash">{p.encrypted_prompt_cid.slice(0, 12)}...</span>
-                      )}
-                    </td>
-                    <td style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-                      {new Date(p.created_at).toLocaleString()}
-                    </td>
-                  </tr>
-                ))}
+                {prompts.map((p) => {
+                  const totalTokens = (p.input_tokens || 0) + (p.output_tokens || 0);
+                  const explorerLink = p.tx_hash && !p.tx_hash.startsWith('0x_')
+                    ? `https://testnet.monadexplorer.com/tx/${p.tx_hash}`
+                    : null;
+                  return (
+                    <tr key={p.id}>
+                      <td style={{ fontWeight: 600 }}>{p.model_name || p.model_id?.split('-')[0]}</td>
+                      <td style={{ maxWidth: '220px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {p.prompt_text}
+                      </td>
+                      <td>
+                        <span style={{ fontSize: '0.75rem', color: '#93c5fd', background: 'rgba(59,130,246,0.12)', padding: '0.15rem 0.4rem', borderRadius: '4px' }}>
+                          {p.input_tokens || 0}
+                        </span>
+                      </td>
+                      <td>
+                        <span style={{ fontSize: '0.75rem', color: '#d8b4fe', background: 'rgba(168,85,247,0.12)', padding: '0.15rem 0.4rem', borderRadius: '4px' }}>
+                          {p.output_tokens || 0}
+                        </span>
+                      </td>
+                      <td>
+                        <span style={{ fontWeight: 700, color: '#fff', fontSize: '0.8rem' }}>
+                          {totalTokens}
+                        </span>
+                      </td>
+                      <td style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                        {p.duration_ms ? `${(p.duration_ms / 1000).toFixed(2)}s` : '—'}
+                      </td>
+                      <td>
+                        <span className={`status-badge ${p.status}`}>
+                          {p.status === 'completed' ? '✓' : '⏳'} {p.status}
+                        </span>
+                      </td>
+                      <td>
+                        <div style={{ display: 'flex', gap: '0.35rem', alignItems: 'center' }}>
+                          {explorerLink ? (
+                            <a
+                              href={explorerLink}
+                              target="_blank"
+                              rel="noreferrer"
+                              style={{ fontSize: '0.7rem', color: '#a78bfa', textDecoration: 'none', background: 'rgba(139,92,246,0.15)', padding: '0.15rem 0.4rem', borderRadius: '4px' }}
+                            >
+                              Monad ↗
+                            </a>
+                          ) : (
+                            <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>On-chain</span>
+                          )}
+                        </div>
+                      </td>
+                      <td style={{ fontSize: '0.75rem', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>
+                        {new Date(p.created_at).toLocaleDateString()}
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>

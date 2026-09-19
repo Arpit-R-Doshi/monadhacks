@@ -193,12 +193,12 @@ export default function ModelDetail() {
         return;
       }
 
-      // Synchronize SQLite read-index
+      // Synchronize SQLite read-index with on-chain tx hash
       toast.loading('Syncing local index...', { id: 'sub-tx' });
       const syncRes = await fetch(`${API_URL}/api/subscriptions/sync`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userAddress: wallet, modelId: id }),
+        body: JSON.stringify({ userAddress: wallet, modelId: id, txHash: subHash }),
       });
       const data = await syncRes.json();
       

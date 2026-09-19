@@ -27,24 +27,17 @@ export default function Navbar() {
         <Link to="/" className={isActive('/')}>
           <span className="nav-icon"></span> Home
         </Link>
-        {(!userRole || userRole === 'user') && (
-          <>
-            <Link to="/marketplace" className={isActive('/marketplace')}>
-              Marketplace
-            </Link>
-            <Link to="/history" className={isActive('/history')}>
-              History
-            </Link>
-            <Link to="/dashboard" className={isActive('/dashboard')}>
-              Dashboard
-            </Link>
-          </>
-        )}
+        <Link to="/marketplace" className={isActive('/marketplace')}>
+          Marketplace
+        </Link>
+        <Link to="/history" className={isActive('/history')}>
+          History
+        </Link>
+        <Link to="/dashboard" className={isActive('/dashboard')}>
+          Dashboard
+        </Link>
         {userRole === 'owner' && (
           <>
-            <Link to="/marketplace" className={isActive('/marketplace')}>
-              Marketplace
-            </Link>
             <Link to="/owner/upload" className={isActive('/owner/upload')}>
               Upload
             </Link>
