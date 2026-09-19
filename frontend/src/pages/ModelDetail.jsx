@@ -110,14 +110,14 @@ export default function ModelDetail() {
 
       const price = model.subscription_price.toString();
       const priceWei = parseEther(price);
-      const tokenAbi = parseAbi(appConfig.abis.EclipseToken || appConfig.abis.SYN3RGYToken);
+      const tokenAbi = parseAbi(appConfig.abis.EclipseToken);
       const paymentAbi = parseAbi(appConfig.abis.PaymentManager);
       const gasOverrides = {
         maxPriorityFeePerGas: parseGwei('40'),
         maxFeePerGas: parseGwei('50'),
       };
       
-      const tokenAddress = appConfig.addresses.EclipseToken || appConfig.addresses.SYN3RGYToken;
+      const tokenAddress = appConfig.addresses.EclipseToken;
 
       // Pre-flight: check on-chain ECL balance
       toast.loading('Checking on-chain balance...', { id: 'sub-tx' });

@@ -35,10 +35,10 @@ router.post('/', async (req, res) => {
     // 3. Check for active subscription
     const user = getOrCreateUser(userAddress);
     
-    // Perform highly-secure read from Layer-2 Polygon RPC
+    // Perform read from Monad Testnet RPC
     try {
-      const hasPolygonSub = await hasActiveSubOnChain(userAddress, modelId);
-      if (!hasPolygonSub) {
+      const hasMonadSub = await hasActiveSubOnChain(userAddress, modelId);
+      if (!hasMonadSub) {
          console.warn('[Execution] No on-chain subscription found, proceeding with local check only.');
       }
     } catch (chainErr) {
