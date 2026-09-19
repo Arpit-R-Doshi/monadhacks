@@ -7,3 +7,5 @@ dist/
 .DS_Store
 deployment.json
 backend/synergy.db
+backend/synergy.db-wal
+backend/synergy.db-shm
