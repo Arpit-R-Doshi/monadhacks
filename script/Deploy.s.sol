@@ -8,10 +8,9 @@ import "../src/PromptExecution.sol";
 
 contract DeployAll is Script {
     function run() external {
-        uint256 deployerPrivateKey = vm.envUint("DEPLOYER_PRIVATE_KEY");
-        address deployer = vm.addr(deployerPrivateKey);
+        address deployer = msg.sender;
 
-        vm.startBroadcast(deployerPrivateKey);
+        vm.startBroadcast();
 
         // 1. Deploy Model Registry
         ModelRegistry registry = new ModelRegistry(deployer);
