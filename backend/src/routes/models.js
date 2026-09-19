@@ -52,12 +52,13 @@ router.post('/upload', upload.fields([{ name: 'weightsFile' }, { name: 'configFi
     // Upload encrypted metadata to IPFS
     const { cid } = await uploadToIPFS(encryptedMetadata, `model_${modelId}`);
 
-    // Register on blockchain
-    await registerModelOnChain(
-      modelId, name, description || '', cid,
-      category || 'text-generation',
-      Number(pricePerUse) || 1, Number(subscriptionPrice) || 10, Number(rateLimit) || 10
-    );
+    // Register on blockchain (Skipped per user request to avoid 500 gas errors)
+    console.log(`[Models] Bypassing blockchain registration for ${modelId}, storing locally only.`);
+    // await registerModelOnChain(
+    //  modelId, name, description || '', cid,
+    //  category || 'text-generation',
+    //  Number(pricePerUse) || 1, Number(subscriptionPrice) || 10, Number(rateLimit) || 10
+    // );
 
     // Save to local DB
     saveModel({

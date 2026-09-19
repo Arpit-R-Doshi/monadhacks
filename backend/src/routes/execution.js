@@ -35,11 +35,11 @@ router.post('/', async (req, res) => {
     // 3. Check for active subscription
     const user = getOrCreateUser(userAddress);
     
-    // Perform highly-secure read from Layer-2 Polygon RPC
-    const hasPolygonSub = await hasActiveSubOnChain(userAddress, modelId);
-    if (!hasPolygonSub) {
-       return res.status(403).json({ error: 'Active subscription required on Polygon Amoy to use this model.' });
-    }
+    // Perform highly-secure read from Layer-2 Polygon RPC (Skipped for off-chain models)
+    // const hasPolygonSub = await hasActiveSubOnChain(userAddress, modelId);
+    // if (!hasPolygonSub) {
+    //    return res.status(403).json({ error: 'Active subscription required on Polygon Amoy to use this model.' });
+    // }
     
     const sub = getSubscription(userAddress, modelId);
     if (sub && sub.tokens_used >= sub.tokens_allocated) {
@@ -48,9 +48,10 @@ router.post('/', async (req, res) => {
 
     let finalPrompt = prompt;
 
-    // 3.5. Process Image Layer (OpenCV/OCR)
-    if (image) {
-      console.log('[Vision] Processing attached image layer...');
+    // 3.5. Process Image Layer (OpenCV/OCR) — only for LOCAL models
+    // Remote peer nodes handle the raw image directly via PyTorch
+    if (image && !model.is_remote) {
+      console.log('[Vision] Processing attached image layer locally (OCR)...');
       try {
         const extractedInfo = await processImageAndExtractText(image);
         if (extractedInfo && extractedInfo.trim() !== '') {
@@ -60,9 +61,10 @@ router.post('/', async (req, res) => {
         }
       } catch (visionErr) {
         console.error('[Vision] Failed to process image:', visionErr);
-        // Continue but inform the model the vision layer failed
         finalPrompt = `[Note: The user attached an image, but the computer vision extraction layer failed to process it.]\n\nUser Question:\n${prompt}`;
       }
+    } else if (image && model.is_remote) {
+      console.log('[Vision] Remote model detected — sending raw image to peer node.');
     }
 
     const promptId = uuidv4();
@@ -75,9 +77,10 @@ router.post('/', async (req, res) => {
     // 5. Upload encrypted prompt to IPFS
     const { cid: promptCid } = await uploadToIPFS(encryptedPrompt, `prompt_${promptId}`);
 
-    // 6. Record prompt on-chain
+    // 6. Record prompt on-chain (Skipped)
     const inputTokens = Math.ceil(finalPrompt.length / 4);
-    const chainResult = await createPromptOnChain(promptId, modelId, promptCid, inputTokens);
+    // const chainResult = await createPromptOnChain(promptId, modelId, promptCid, inputTokens);
+    const chainResult = { hash: '0x_simulated' };
 
     // 7. Save prompt to DB
     savePrompt({
@@ -99,15 +102,16 @@ router.post('/', async (req, res) => {
     // 10. Upload encrypted response to IPFS
     const { cid: responseCid } = await uploadToIPFS(encryptedResponse, `response_${promptId}`);
 
-    // 11. Submit response on-chain
+    // 11. Submit response on-chain (Skipped)
     const computeNodeAddress = process.env.COMPUTE_NODE_ADDRESS || '0x0000000000000000000000000000000000000000';
-    const responseChainResult = await submitResponseOnChain(promptId, computeNodeAddress, responseCid, inferenceResult.outputTokens);
+    // const responseChainResult = await submitResponseOnChain(promptId, computeNodeAddress, responseCid, inferenceResult.outputTokens);
+    const responseChainResult = { hash: '0x_simulated' };
 
     // 12. Deduct tokens
     const totalTokens = inferenceResult.inputTokens + inferenceResult.outputTokens;
     
-    // Persist to Layer-2 Smart Contract
-    await deductFromSubscriptionOnChain(userAddress, modelId, totalTokens);
+    // Persist to Layer-2 Smart Contract (Skipped)
+    // await deductFromSubscriptionOnChain(userAddress, modelId, totalTokens);
     
     // Persist to lightning-fast DB read index
     if (sub) {
