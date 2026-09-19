@@ -5,7 +5,6 @@ import { getApiKeyByHash, updateApiKeyUsage, checkApiKeyRateLimit, checkApiKeyUs
 import { runInference } from '../services/compute.js';
 import { encrypt } from '../services/encryption.js';
 import { uploadToIPFS } from '../services/ipfs.js';
-import { processImageAndExtractText } from '../services/vision.js';
 
 const router = Router();
 
@@ -141,43 +140,17 @@ router.post('/chat/completions', authenticateApiKey, async (req, res) => {
       });
     }
 
-    // Check for attached image (multimodal input)
-    let attachedImage = req.body.image || req.body.image_url || null;
-
-    // Build prompt from messages (supporting OpenAI multimodal array content or string)
+    // Build prompt from messages
     let prompt = messages.map(m => {
-      let contentStr = '';
-      if (Array.isArray(m.content)) {
-        for (const part of m.content) {
-          if (part.type === 'text') contentStr += part.text;
-          if (part.type === 'image_url') {
-            attachedImage = part.image_url?.url || part.image_url;
-          }
-        }
-      } else {
-        contentStr = m.content || '';
-      }
+      let contentStr = typeof m.content === 'string' ? m.content : (Array.isArray(m.content) ? m.content.map(p => p.text || '').join(' ') : '');
       if (m.role === 'system') return `System: ${contentStr}`;
       if (m.role === 'user') return `User: ${contentStr}`;
       if (m.role === 'assistant') return `Assistant: ${contentStr}`;
       return contentStr;
     }).join('\n\n');
 
-    // If an image is provided, extract vision/OCR context
-    if (attachedImage) {
-      try {
-        console.log('[API v1] Processing multimodal image layer with vision service...');
-        const extractedText = await processImageAndExtractText(attachedImage);
-        if (extractedText && extractedText.trim().length > 0) {
-          prompt = `[Attached Image OCR/Visual Content: "${extractedText}"]\n\n${prompt}`;
-        }
-      } catch (imgErr) {
-        console.warn('[API v1] Image OCR processing notice:', imgErr.message);
-      }
-    }
-
     // Run inference (via Groq Cloud LPU or Ollama)
-    const inferenceResult = await runInference(modelRecord, prompt, attachedImage);
+    const inferenceResult = await runInference(modelRecord, prompt, null);
     const totalTokens = (inferenceResult.inputTokens || 0) + (inferenceResult.outputTokens || 0);
 
     // Deduct balance

@@ -3,7 +3,6 @@ import { v4 as uuidv4 } from 'uuid';
 import { encrypt, decrypt } from '../services/encryption.js';
 import { uploadToIPFS } from '../services/ipfs.js';
 import { runInference, healthCheck, COMPUTE_NODES, getNodeById, allNodesHealth } from '../services/compute.js';
-import { processImageAndExtractText } from '../services/vision.js';
 import { getModelById, savePrompt, updatePromptResponse, getPromptsByUser, checkRateLimit, incrementModelUses, getOrCreateUser, updateUserBalance, getSubscription, updateSubscriptionTokens } from '../db/sqlite.js';
 import { createPromptOnChain, submitResponseOnChain, deductFromSubscriptionOnChain, hasActiveSubscription as hasActiveSubOnChain } from '../services/blockchain.js';
 
@@ -15,7 +14,7 @@ const router = Router();
  */
 router.post('/', async (req, res) => {
   try {
-    const { modelId, prompt, userAddress, image, sessionId, nodeId } = req.body;
+    const { modelId, prompt, userAddress, sessionId, nodeId } = req.body;
 
     if (!modelId || !prompt || !userAddress) {
       return res.status(400).json({ error: 'Missing required fields: modelId, prompt, userAddress' });
@@ -51,35 +50,10 @@ router.post('/', async (req, res) => {
     }
 
     const selectedNode = getNodeById(nodeId);
-    const isGroqNode = selectedNode?.type === 'groq' || selectedNode?.id === 'groq-cloud';
-    const effectiveImage = isGroqNode ? null : image;
-
-    let finalPrompt = prompt;
-
-    // 3.5. Process Image Layer (OpenCV/OCR) — only for LOCAL models (and non-Groq)
-    // Remote peer nodes handle the raw image directly via PyTorch
-    if (effectiveImage && !model.is_remote) {
-      console.log('[Vision] Processing attached image layer locally (OCR)...');
-      try {
-        const extractedInfo = await processImageAndExtractText(effectiveImage);
-        if (extractedInfo && extractedInfo.trim() !== '') {
-          finalPrompt = `I am attaching an image. Here is the visual extraction information from OpenCV/OCR:\n"${extractedInfo}"\n\nUser Question:\n${prompt}`;
-        } else {
-          finalPrompt = `I am attaching an image, but it appears to be empty or contain no recognizable text.\n\nUser Question:\n${prompt}`;
-        }
-      } catch (visionErr) {
-        console.error('[Vision] Failed to process image:', visionErr);
-        finalPrompt = `[Note: The user attached an image, but the computer vision extraction layer failed to process it.]\n\nUser Question:\n${prompt}`;
-      }
-    } else if (effectiveImage && model.is_remote) {
-      console.log('[Vision] Remote model detected — sending raw image to peer node.');
-    }
-
+    const finalPrompt = prompt;
     const promptId = uuidv4();
 
     // 4. Encrypt prompt
-    // Note: We don't encrypt the base64 image here to save DB/IPFS space and gas, 
-    // but in a fully secure architecture, you would encrypt images as well.
     const encryptedPrompt = encrypt(finalPrompt, model.encryption_key);
 
     // 5. Upload encrypted prompt to IPFS
@@ -107,7 +81,7 @@ router.post('/', async (req, res) => {
     });
 
     // 8. Run inference via compute node (Ollama or Remote Peer or Groq)
-    const inferenceResult = await runInference(model, finalPrompt, effectiveImage, selectedNode.url);
+    const inferenceResult = await runInference(model, finalPrompt, null, selectedNode.url);
     console.log(`[Execution] Inference completed on ${selectedNode.name} (${selectedNode.id})`);
 
     // 9. Encrypt response

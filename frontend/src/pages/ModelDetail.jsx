@@ -17,8 +17,6 @@ export default function ModelDetail() {
   const [historyLoaded, setHistoryLoaded] = useState(false);
   const [sessionId, setSessionId] = useState(() => crypto.randomUUID());
   const [prompt, setPrompt] = useState('');
-  const [imageFile, setImageFile] = useState(null);
-  const [imageBase64, setImageBase64] = useState('');
   const [sending, setSending] = useState(false);
   
   // Subscription state
@@ -31,17 +29,8 @@ export default function ModelDetail() {
   const [selectedNode, setSelectedNode] = useState('groq-cloud');
   
   const currentNode = computeNodes.find(n => n.id === selectedNode);
-  const isGroqModel = selectedNode === 'groq-cloud' || currentNode?.type === 'groq' || (!model?.is_remote && model?.input_modality !== 'multimodal');
 
   const messagesEndRef = useRef(null);
-  const fileInputRef = useRef(null);
-
-  useEffect(() => {
-    if (isGroqModel && imageBase64) {
-      setImageFile(null);
-      setImageBase64('');
-    }
-  }, [selectedNode, isGroqModel]);
 
   useEffect(() => {
     fetchModel();
@@ -268,13 +257,10 @@ export default function ModelDetail() {
     }
 
     const currentPrompt = prompt.trim();
-    const payloadImage = isGroqModel ? null : imageBase64;
-    const userMsg = { role: 'user', content: currentPrompt, image: payloadImage, timestamp: new Date() };
+    const userMsg = { role: 'user', content: currentPrompt, timestamp: new Date() };
     setMessages(prev => [...prev, userMsg]);
     
     setPrompt('');
-    setImageFile(null);
-    setImageBase64('');
     setSending(true);
 
     try {
@@ -285,7 +271,6 @@ export default function ModelDetail() {
           modelId: id,
           prompt: currentPrompt,
           userAddress: wallet,
-          image: payloadImage,
           sessionId: sessionId,
           nodeId: selectedNode,
         }),
@@ -317,21 +302,6 @@ export default function ModelDetail() {
     }
 
     setSending(false);
-  };
-
-  const handleImageUpload = (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-
-    if (file.size > 5 * 1024 * 1024) {
-      toast.error('Image must be less than 5MB');
-      return;
-    }
-
-    setImageFile(file);
-    const reader = new FileReader();
-    reader.onloadend = () => setImageBase64(reader.result);
-    reader.readAsDataURL(file);
   };
 
   const handleKeyDown = (e) => {
@@ -420,8 +390,6 @@ export default function ModelDetail() {
                   setHistoryLoaded(true);
                   setSessionId(crypto.randomUUID());
                   setPrompt('');
-                  setImageFile(null);
-                  setImageBase64('');
                   toast.success('New chat started');
                 }}
                 style={{
@@ -505,11 +473,6 @@ export default function ModelDetail() {
 
           {messages.map((msg, i) => (
             <div key={i} className={`message ${msg.role}`} style={msg.error ? { borderColor: 'var(--error)' } : {}}>
-              {msg.image && (
-                <div style={{ marginBottom: '0.5rem' }}>
-                  <img src={msg.image} alt="Upload" style={{ maxWidth: '200px', borderRadius: '8px' }} />
-                </div>
-              )}
               {msg.content}
               {msg.meta && (
                 <div className="meta">
@@ -531,38 +494,8 @@ export default function ModelDetail() {
         </div>
 
         {(!wallet || subscribed || Number(model.subscription_price) === 0) ? (
-          <div className="prompt-input-container" style={{ position: 'relative' }}>
-            {!isGroqModel && imageBase64 && (
-              <div className="image-preview" style={{ padding: '0.5rem', background: 'var(--bg-glass)', borderRadius: '8px 8px 0 0', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <img src={imageBase64} alt="Preview" style={{ height: '40px', borderRadius: '4px' }} />
-                <span style={{ fontSize: '0.8rem', color: 'var(--text-dim)' }}>{imageFile?.name}</span>
-                <button 
-                  onClick={() => { setImageFile(null); setImageBase64(''); }}
-                  style={{ marginLeft: 'auto', background: 'none', border: 'none', color: 'var(--error)', cursor: 'pointer' }}
-                >✕</button>
-              </div>
-            )}
-            <div className="prompt-input" style={{ borderRadius: (!isGroqModel && imageBase64) ? '0 0 8px 8px' : '8px' }}>
-              {!isGroqModel && (
-                <>
-                  <button
-                    className="upload-btn"
-                    onClick={() => fileInputRef.current?.click()}
-                    disabled={!wallet || sending}
-                    style={{ background: 'none', border: 'none', color: 'var(--text-dim)', fontSize: '1.2rem', cursor: 'pointer', padding: '0 0.5rem' }}
-                    title="Attach Image"
-                  >
-                    📸
-                  </button>
-                  <input
-                    type="file"
-                    ref={fileInputRef}
-                    accept="image/*"
-                    style={{ display: 'none' }}
-                    onChange={handleImageUpload}
-                  />
-                </>
-              )}
+          <div className="prompt-input-container">
+            <div className="prompt-input">
               <textarea
                 value={prompt}
                 onChange={(e) => setPrompt(e.target.value)}
