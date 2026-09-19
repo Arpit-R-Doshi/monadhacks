@@ -228,15 +228,14 @@ export default function OwnerDashboard() {
                     </div>
                   </div>
 
-                  <div className="model-footer">
+                  <div className="model-footer" style={{ flexDirection: 'column', alignItems: 'stretch', gap: '0.75rem' }}>
                     <div className="model-price">
                       <span className="amount">{model.subscription_price}</span>
                       <span className="unit">ECL / mo</span>
                     </div>
-                    <div style={{ display: 'flex', gap: '0.5rem' }}>
+                    <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
                       <button
                         onClick={async () => {
-                          // Fetch existing co-owners
                           try {
                             const res = await fetch(`${API_URL}/api/models/${model.id}/co-owners`);
                             const data = await res.json();
@@ -246,7 +245,7 @@ export default function OwnerDashboard() {
                         }}
                         style={{
                           background: 'rgba(33,150,243,0.1)', color: '#64b5f6', border: '1px solid rgba(33,150,243,0.3)',
-                          padding: '0.4rem 0.8rem', borderRadius: '6px', cursor: 'pointer', fontSize: '0.8rem', fontWeight: 'bold'
+                          padding: '0.35rem 0.65rem', borderRadius: '6px', cursor: 'pointer', fontSize: '0.75rem', fontWeight: 'bold'
                         }}
                       >
                         Share
@@ -255,7 +254,7 @@ export default function OwnerDashboard() {
                         onClick={() => { setTransferModal(model); setTransferAddress(''); }}
                         style={{
                           background: 'rgba(255,171,64,0.1)', color: '#ffab40', border: '1px solid rgba(255,171,64,0.3)',
-                          padding: '0.4rem 0.8rem', borderRadius: '6px', cursor: 'pointer', fontSize: '0.8rem', fontWeight: 'bold'
+                          padding: '0.35rem 0.65rem', borderRadius: '6px', cursor: 'pointer', fontSize: '0.75rem', fontWeight: 'bold'
                         }}
                       >
                         Transfer
@@ -287,12 +286,12 @@ export default function OwnerDashboard() {
                         }}
                         style={{
                           background: 'rgba(244,67,54,0.1)', color: '#ef5350', border: '1px solid rgba(244,67,54,0.3)',
-                          padding: '0.4rem 0.8rem', borderRadius: '6px', cursor: 'pointer', fontSize: '0.8rem', fontWeight: 'bold'
+                          padding: '0.35rem 0.65rem', borderRadius: '6px', cursor: 'pointer', fontSize: '0.75rem', fontWeight: 'bold'
                         }}
                       >
                         Remove
                       </button>
-                      <Link to={`/model/${model.id}`} className="btn btn-primary btn-sm">View Chat →</Link>
+                      <Link to={`/model/${model.id}`} className="btn btn-primary btn-sm" style={{ fontSize: '0.75rem', padding: '0.35rem 0.65rem' }}>View →</Link>
                     </div>
                   </div>
                 </div>
